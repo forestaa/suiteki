@@ -1,5 +1,3 @@
-# suiteki - an assembler for our 1st architecture
-
 ## build
 ```
 $ git clone http://github.com/rikatze/suiteki.git
