@@ -1,6 +1,7 @@
 module Main where
 
 import Data.Char
+import Data.Maybe
 {- import Debug.Trace -}
 import Data.Binary
 import Data.List (foldl')
@@ -36,7 +37,7 @@ main = do
 
 writeBinary :: [String] -> IO ()
 writeBinary args = do
-  ss <- readFile (args !! 0)
+  ss <- readFile (head args)
   let ls = map words $ lines ss
   let parsed = constructByteString $ translateInstructions $ parse ls 0 M.empty
   B.writeFile (args !! 1) parsed
@@ -49,15 +50,17 @@ writeBinary args = do
                    `unionFileModes` otherExecuteMode
 
 constructByteString :: [String] -> B.ByteString
-constructByteString [] = B.empty
-constructByteString (s:ss) = convertBinaryStringToBinary s `B.append` constructByteString ss
+constructByteString = foldr (B.append . convertBinaryStringToBinary) B.empty
+{- constructByteString [] = B.empty -}
+{- constructByteString (s:ss) = convertBinaryStringToBinary s `B.append` constructByteString ss -}
 
 convertBinaryStringToBinary :: String -> B.ByteString
-convertBinaryStringToBinary bstr = encode $ (fromIntegral $ toDec bstr :: Word32)
+convertBinaryStringToBinary bstr = encode (fromIntegral $ toDec bstr :: Word32)
 
 translateInstructions :: [Instruction] -> [String]
-translateInstructions [] = []
-translateInstructions (x:xs) = instructionToBinaryString x : translateInstructions xs
+translateInstructions = map instructionToBinaryString
+{- translateInstructions [] = [] -}
+{- translateInstructions (x:xs) = instructionToBinaryString x : translateInstructions xs -}
 
 instructionToBinaryString :: Instruction -> String
 instructionToBinaryString (R (opcode, rs, rt, rd, shamt, funct)) = opcode ++ rs ++ rt ++ rd ++ shamt ++ funct
@@ -70,63 +73,63 @@ instructionToBinaryString (FPM (cop1, mt, rt, fs, zero)) = cop1 ++ mt ++ rt ++ f
 parse :: [[String]] -> Int -> Environment -> [Instruction]
 parse [] _ _ = []
 parse (l:ls) instAddr e
-  | l == []            = parse ls instAddr e
-  | l !! 0 !! 0 == '#' = parse ls instAddr e
+  | null l             = parse ls instAddr e
+  | head (head l) == '#' = parse ls instAddr e
   {- | trace ("instAddr: " ++ show instAddr ++ " " ++ show l ++ "\n" ++ show e) False = undefined -}
-  | isLabel l          = parse ls instAddr (extendEnv e (l !! 0) (instAddr + 1))
-  | l !! 0 == "li"     = parseInstruction l instAddr e ++ parse ls (instAddr + 2) e
+  | isLabel l          = parse ls instAddr (extendEnv e (head l) (instAddr + 1))
+  | head l == "li"     = parseInstruction l instAddr e ++ parse ls (instAddr + 2) e
   | otherwise          = parseInstruction l instAddr e ++ parse ls (instAddr + 1) e
 
 
 parseInstruction :: [String] -> Int -> Environment -> [Instruction]
 parseInstruction i instAddr e
-  | i !! 0 == "add"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100000") ]
-  | i !! 0 == "sub"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100010") ]
-  | i !! 0 == "slt"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "101010") ]
-  | i !! 0 == "and"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100100") ]
-  | i !! 0 == "or"      = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100101") ]
-  | i !! 0 == "xor"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100110") ]
-  | i !! 0 == "jalr"    = [ R ("000000", addr (i !! 2), "00000", addr (i !! 1), "00000", "001001") ] -- hint?
-  | i !! 0 == "sll"     = [ R ("000000", "00000", addr (i !! 1), addr (i !! 2), binaryExp (read (i !! 3)) 5, "000000") ]
-  | i !! 0 == "srl"     = [ R ("000000", "00000", addr (i !! 1), addr (i !! 2), binaryExp (read (i !! 3)) 5, "000010") ]
-  | i !! 0 == "add.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000000") ]
-  | i !! 0 == "sub.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000001") ]
-  | i !! 0 == "mul.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000010") ]
-  | i !! 0 == "div.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000011") ]
-  | i !! 0 == "mov.s"   = [ R ("010001", "10000", "00000", addr (i !! 2), addr (i !! 1), "000110") ]
-  | i !! 0 == "addi"    = [ I ("001000", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16) ]
-  | i !! 0 == "addiu"   = [ I ("001001", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16) ]
-  | i !! 0 == "beq"     = [ I ("000100", addr (i !! 1), addr (i !! 2), labelToAddr (i !! 3) instAddr e) ]
-  | i !! 0 == "bne"     = [ I ("000101", addr (i !! 1), addr (i !! 2), labelToAddr (i !! 3) instAddr e) ]
-  | i !! 0 == "blez"    = [ I ("000110", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e) ]
-  | i !! 0 == "bgez"    = [ I ("000001", addr (i !! 1), "00001",       labelToAddr (i !! 2) instAddr e) ]
-  | i !! 0 == "bgtz"    = [ I ("000111", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e) ]
-  | i !! 0 == "bltz"    = [ I ("000001", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e) ]
-  | i !! 0 == "lui"     = [ I ("001111", "00000",       addr (i !! 1), binaryExp (read (i !! 2)) 16) ]
-  | i !! 0 == "ori"     = [ I ("001101", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16) ]
-  | i !! 0 == "lw"      = [ parseIndexedInstruction i ]
-  | i !! 0 == "sw"      = [ parseIndexedInstruction i ]
-  | i !! 0 == "lwc1"    = [ parseIndexedInstruction i ]
-  | i !! 0 == "swc1"    = [ parseIndexedInstruction i ]
-  | i !! 0 == "jal"     = [ J ("000011", binaryExp (read (i !! 1)) 26) ]
-  | i !! 0 == "c.olt.s" = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0100") ]
-  | i !! 0 == "c.eq.s"  = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0010") ]
-  | i !! 0 == "c.ole.s" = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0110") ]
-  | i !! 0 == "bc1t"    = [ FPB ("010001", "01000", addrCC (i !! 1), "0", "1", binaryExp (read (i !! 2)) 16) ]
-  | i !! 0 == "mfc1"    = [ FPM ("010001", "00000", addr (i !! 1), addrF (i !! 2), "0000000000") ]
-  | i !! 0 == "mtc1"    = [ FPM ("010001", "00100", addr (i !! 1), addrF (i !! 2), "0000000000") ]
-  | i !! 0 == "li"      = expandLI i instAddr e
-  | i !! 0 == "move"    = expandMOVE i instAddr e
+  | head i == "add"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100000") ]
+  | head i == "sub"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100010") ]
+  | head i == "slt"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "101010") ]
+  | head i == "and"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100100") ]
+  | head i == "or"      = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100101") ]
+  | head i == "xor"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100110") ]
+  | head i == "jalr"    = [ R ("000000", addr (i !! 2), "00000", addr (i !! 1), "00000", "001001") ] -- hint?
+  | head i == "sll"     = [ R ("000000", "00000", addr (i !! 1), addr (i !! 2), binaryExp (read (i !! 3)) 5, "000000") ]
+  | head i == "srl"     = [ R ("000000", "00000", addr (i !! 1), addr (i !! 2), binaryExp (read (i !! 3)) 5, "000010") ]
+  | head i == "add.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000000") ]
+  | head i == "sub.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000001") ]
+  | head i == "mul.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000010") ]
+  | head i == "div.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000011") ]
+  | head i == "mov.s"   = [ R ("010001", "10000", "00000", addr (i !! 2), addr (i !! 1), "000110") ]
+  | head i == "addi"    = [ I ("001000", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16) ]
+  | head i == "addiu"   = [ I ("001001", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16) ]
+  | head i == "beq"     = [ I ("000100", addr (i !! 1), addr (i !! 2), labelToAddr (i !! 3) instAddr e) ]
+  | head i == "bne"     = [ I ("000101", addr (i !! 1), addr (i !! 2), labelToAddr (i !! 3) instAddr e) ]
+  | head i == "blez"    = [ I ("000110", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e) ]
+  | head i == "bgez"    = [ I ("000001", addr (i !! 1), "00001",       labelToAddr (i !! 2) instAddr e) ]
+  | head i == "bgtz"    = [ I ("000111", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e) ]
+  | head i == "bltz"    = [ I ("000001", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e) ]
+  | head i == "lui"     = [ I ("001111", "00000",       addr (i !! 1), binaryExp (read (i !! 2)) 16) ]
+  | head i == "ori"     = [ I ("001101", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16) ]
+  | head i == "lw"      = [ parseIndexedInstruction i ]
+  | head i == "sw"      = [ parseIndexedInstruction i ]
+  | head i == "lwc1"    = [ parseIndexedInstruction i ]
+  | head i == "swc1"    = [ parseIndexedInstruction i ]
+  | head i == "jal"     = [ J ("000011", binaryExp (read (i !! 1)) 26) ]
+  | head i == "c.olt.s" = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0100") ]
+  | head i == "c.eq.s"  = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0010") ]
+  | head i == "c.ole.s" = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0110") ]
+  | head i == "bc1t"    = [ FPB ("010001", "01000", addrCC (i !! 1), "0", "1", binaryExp (read (i !! 2)) 16) ]
+  | head i == "mfc1"    = [ FPM ("010001", "00000", addr (i !! 1), addrF (i !! 2), "0000000000") ]
+  | head i == "mtc1"    = [ FPM ("010001", "00100", addr (i !! 1), addrF (i !! 2), "0000000000") ]
+  | head i == "li"      = expandLI i instAddr e
+  | head i == "move"    = expandMOVE i instAddr e
   | otherwise           = []
 
 
 -- lw $t0, 4($gp) -> I (opcode, $gp, $rt, <4 in binary>)
 parseIndexedInstruction :: [String] -> Instruction
 parseIndexedInstruction i -- = I (opCode, base, rt, offset)
-  | i !! 0 == "lw"   = I ("100011", base, addr (i !! 1), offset)
-  | i !! 0 == "sw"   = I ("101011", base, addr (i !! 1), offset)
-  | i !! 0 == "lwc1" = I ("110001", base, addr (i !! 1), offset)
-  | i !! 0 == "swc1" = I ("111001", base, addr (i !! 1), offset)
+  | head i == "lw"   = I ("100011", base, addr (i !! 1), offset)
+  | head i == "sw"   = I ("101011", base, addr (i !! 1), offset)
+  | head i == "lwc1" = I ("110001", base, addr (i !! 1), offset)
+  | head i == "swc1" = I ("111001", base, addr (i !! 1), offset)
   | otherwise = undefined
   where (baseRegName, immediateInDigit) = parseRegisterWithOffset (i !! 2)
         offset = binaryExp (read immediateInDigit) 16
@@ -135,8 +138,8 @@ parseIndexedInstruction i -- = I (opCode, base, rt, offset)
 -- "3(%r3)" -> ("%r3", "3")
 parseRegisterWithOffset :: String -> (String, String)
 parseRegisterWithOffset str = (regName, offset)
-  where offset = takeWhile (\c -> c /= '(') str
-        regName = takeWhile (\c -> c /= ')') $ drop 1 $ dropWhile (\c -> c /= '(') str
+  where offset = takeWhile (/= '(') str
+        regName = takeWhile (/= ')') $ drop 1 $ dropWhile (/= '(') str
 
 -- "01010" -> 10, "110" -> 6, "10" -> 2, etc.
 toDec :: String -> Int
@@ -151,10 +154,10 @@ expandLI i instAddr e = instructionLUI ++ instructionORI
         instructionORI = parseInstruction ["ori", i !! 1, i !! 1, lower] instAddr e
 
 expandMOVE :: [String] -> Int -> Environment -> [Instruction]
-expandMOVE i instAddr e = parseInstruction ["or", i !! 1, i !! 2, "r0"] instAddr e
+expandMOVE i = parseInstruction ["or", i !! 1, i !! 2, "r0"]
 
 removeCommaIfAny :: String -> String
-removeCommaIfAny regStr = filter (\c -> c /= ',') regStr
+removeCommaIfAny = filter (/= ',')
 
 addr :: String -> String
 addr mnemonic = unwrapper $ M.lookup regName registerToAddress
@@ -179,7 +182,7 @@ binaryExp num len
         bn = showIntAtBase 2 intToDigit (2 ^ len + num) ""
 
 isLabel :: [String] -> Bool
-isLabel i = length i == 1 && drop (length (i !! 0) - 1) (i !! 0) == ":"
+isLabel i = length i == 1 && drop (length (head i) - 1) (head i) == ":"
 
 extendEnv :: Environment -> String -> Int -> Environment
 extendEnv e label i = M.insert (take (length label - 1) label) i e
@@ -187,9 +190,7 @@ extendEnv e label i = M.insert (take (length label - 1) label) i e
 -- ".label" e -> "0101010110...01"
 labelToAddr :: String -> Int -> Environment -> String
 labelToAddr label currentLine e = addrDiff
-  where lineNum = case M.lookup label e of
-                    Just num -> num
-                    Nothing -> undefined
+  where lineNum = fromMaybe undefined (M.lookup label e)
         addrDiff = binaryExp (lineNum - currentLine) 16
 
 registerToAddress :: M.Map String String
