@@ -135,7 +135,7 @@ parseIndexedInstruction i -- = I (opCode, base, rt, offset)
         offset = binaryExp (read immediateInDigit) 16
         base = addr baseRegName
 
--- "3(%r3)" -> ("%r3", "3")
+-- "3($r3)" -> ("$r3", "3")
 parseRegisterWithOffset :: String -> (String, String)
 parseRegisterWithOffset str = (regName, offset)
   where offset = takeWhile (/= '(') str
