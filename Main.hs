@@ -2,7 +2,7 @@ module Main where
 
 import Data.Char
 import Data.Maybe
-{- import Debug.Trace -}
+import Debug.Trace
 import Data.Binary
 import Data.List (foldl')
 import Numeric
@@ -39,7 +39,8 @@ writeBinary :: [String] -> IO ()
 writeBinary args = do
   ss <- readFile (head args)
   let ls = map words $ lines ss
-  let parsed = constructByteString $ translateInstructions $ parse ls 0 M.empty
+  let labels = prepareLabels ls 0
+  let parsed = constructByteString $ translateInstructions $ parse ls 0 labels
   B.writeFile (args !! 1) parsed
   setFileMode (args !! 1) permission
     where
@@ -70,13 +71,24 @@ instructionToBinaryString (FPC (opcode, fmt, ft, fs, cc, zero, a, fc, cond)) = o
 instructionToBinaryString (FPB (cop1, bc, cc, nd, td, offset)) = cop1 ++ bc ++ cc ++ nd ++ td ++ offset
 instructionToBinaryString (FPM (cop1, mt, rt, fs, zero)) = cop1 ++ mt ++ rt ++ fs ++ zero
 
+prepareLabels :: [[String]] -> Int -> Environment
+prepareLabels [] _ = M.empty
+prepareLabels (l:ls) instAddr
+  | null l               = prepareLabels ls instAddr
+  | head (head l) == '#' = prepareLabels ls instAddr
+  {- | trace (show instAddr ++ ": " ++ show l) False = undefined -}
+  | isLabel l            = extendEnv (prepareLabels ls (instAddr + 1)) (head l) (instAddr + 1)
+  | head l == "li"       = prepareLabels ls (instAddr + 2)
+  | otherwise            = prepareLabels ls (instAddr + 1)
+
+
 parse :: [[String]] -> Int -> Environment -> [Instruction]
 parse [] _ _ = []
 parse (l:ls) instAddr e
   | null l             = parse ls instAddr e
   | head (head l) == '#' = parse ls instAddr e
   {- | trace ("instAddr: " ++ show instAddr ++ " " ++ show l ++ "\n" ++ show e) False = undefined -}
-  | isLabel l          = parse ls instAddr (extendEnv e (head l) (instAddr + 1))
+  | isLabel l          = parse ls instAddr e
   | head l == "li"     = parseInstruction l instAddr e ++ parse ls (instAddr + 2) e
   | otherwise          = parseInstruction l instAddr e ++ parse ls (instAddr + 1) e
 
