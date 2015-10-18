@@ -52,16 +52,12 @@ writeBinary args = do
 
 constructByteString :: [String] -> B.ByteString
 constructByteString = foldr (B.append . convertBinaryStringToBinary) B.empty
-{- constructByteString [] = B.empty -}
-{- constructByteString (s:ss) = convertBinaryStringToBinary s `B.append` constructByteString ss -}
 
 convertBinaryStringToBinary :: String -> B.ByteString
 convertBinaryStringToBinary bstr = encode (fromIntegral $ toDec bstr :: Word32)
 
 translateInstructions :: [Instruction] -> [String]
 translateInstructions = map instructionToBinaryString
-{- translateInstructions [] = [] -}
-{- translateInstructions (x:xs) = instructionToBinaryString x : translateInstructions xs -}
 
 instructionToBinaryString :: Instruction -> String
 instructionToBinaryString (R (opcode, rs, rt, rd, shamt, funct)) = opcode ++ rs ++ rt ++ rd ++ shamt ++ funct
@@ -92,7 +88,6 @@ parse (l:ls) instAddr e
   | head l == "li"     = parseInstruction l instAddr e ++ parse ls (instAddr + 2) e
   | otherwise          = parseInstruction l instAddr e ++ parse ls (instAddr + 1) e
 
-
 parseInstruction :: [String] -> Int -> Environment -> [Instruction]
 parseInstruction i instAddr e
   | head i == "add"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100000") ]
@@ -102,8 +97,8 @@ parseInstruction i instAddr e
   | head i == "or"      = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100101") ]
   | head i == "xor"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100110") ]
   | head i == "jalr"    = [ R ("000000", addr (i !! 2), "00000", addr (i !! 1), "00000", "001001") ] -- hint?
-  | head i == "sll"     = [ R ("000000", "00000", addr (i !! 1), addr (i !! 2), binaryExp (read (i !! 3)) 5, "000000") ]
-  | head i == "srl"     = [ R ("000000", "00000", addr (i !! 1), addr (i !! 2), binaryExp (read (i !! 3)) 5, "000010") ]
+  | head i == "sll"     = [ R ("000000", "00000", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 5, "000000") ]
+  | head i == "srl"     = [ R ("000000", "00000", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 5, "000010") ]
   | head i == "add.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000000") ]
   | head i == "sub.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000001") ]
   | head i == "mul.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000010") ]
@@ -133,7 +128,6 @@ parseInstruction i instAddr e
   | head i == "li"      = expandLI i instAddr e
   | head i == "move"    = expandMOVE i instAddr e
   | otherwise           = []
-
 
 -- lw $t0, 4($gp) -> I (opcode, $gp, $rt, <4 in binary>)
 parseIndexedInstruction :: [String] -> Instruction
