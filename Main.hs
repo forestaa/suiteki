@@ -37,10 +37,8 @@ data Args = Args { assembly :: String, output :: String, library :: String } der
 
 args :: Parser Args
 args = Args
-  <$> strOption
-      ( long "input"
-     <> short 'i'
-     <> metavar "INPUT"
+  <$> argument str
+      ( metavar "INPUT"
      <> help "Input file for suiteki" )
   <*> strOption
       ( long "output"
