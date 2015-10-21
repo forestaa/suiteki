@@ -235,6 +235,7 @@ labelToAddr label currentLine e len = addrDiff
 --   , ...
 --   , "instructionN reg1, reg2"
 --   ]
+-- This function is used to extract a specific part of libmincaml.S.
 extractCodeBlock :: String -> [[String]] -> [[String]]
 extractCodeBlock label instructions = takeWhile (\i -> not (isLabel i)) $ drop 1 $ dropWhile (\i -> i /= [label ++ ":"]) instructions
 
