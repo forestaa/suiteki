@@ -8,7 +8,9 @@ import Data.List (foldl')
 import Numeric
 import System.Environment
 import System.Posix.Files
+import Options.Applicative
 import qualified Data.ByteString.Lazy as B
+import qualified Data.Graph as G
 import qualified Data.Map as M
 
 type InstructionR         = (String, String, String, String, String, String)
@@ -27,22 +29,41 @@ data Instruction = R InstructionR
 
 type Environment = M.Map String Int
 
-main :: IO ()
-main = do
-  args <- getArgs
-  if length args /= 2 then
-    putStrLn "usage: $ /path/to/suiteki (assembly.S) (outputPath)"
-  else
-    writeBinary args
+data Args = Args { assembly :: String, output :: String, library :: String } deriving Show
 
-writeBinary :: [String] -> IO ()
+args :: Parser Args
+args = Args
+  <$> strOption
+      ( long "input"
+     <> short 'i'
+     <> metavar "INPUT"
+     <> help "Input file for suiteki" )
+  <*> strOption
+      ( long "output"
+     <> short 'o'
+     <> help "The location of the output file" )
+  <*> strOption
+      ( long "lib"
+     <> short 'l'
+     <> metavar "LIBRARY"
+     <> help "The location of libmincaml.S" )
+
+main :: IO()
+main = execParser opts >>= writeBinary
+  where
+    opts = info (helper <*> args)
+      ( fullDesc
+     <> progDesc "Assemble the given file"
+     <> header "suiteki - The super-cool assembler for out 1st architecture" )
+
+writeBinary :: Args -> IO ()
 writeBinary args = do
-  ss <- readFile (head args)
+  ss <- readFile (assembly args)
   let ls = map words $ lines ss
   let labels = prepareLabels ls 0
   let parsed = constructByteString $ translateInstructions $ parse ls 0 labels
-  B.writeFile (args !! 1) parsed
-  setFileMode (args !! 1) permission
+  B.writeFile (output args) parsed
+  setFileMode (output args) permission
     where
       permission = ownerModes
                    `unionFileModes` groupReadMode
@@ -70,9 +91,9 @@ instructionToBinaryString (FPM (cop1, mt, rt, fs, zero)) = cop1 ++ mt ++ rt ++ f
 prepareLabels :: [[String]] -> Int -> Environment
 prepareLabels [] _ = M.empty
 prepareLabels (l:ls) instAddr
+  | trace (show instAddr ++ ": " ++ show l) False = undefined
   | null l               = prepareLabels ls instAddr
   | head (head l) == '#' = prepareLabels ls instAddr
-  {- | trace (show instAddr ++ ": " ++ show l) False = undefined -}
   | isLabel l            = extendEnv (prepareLabels ls (instAddr + 1)) (head l) (instAddr + 1)
   | head l == "li"       = prepareLabels ls (instAddr + 2)
   | otherwise            = prepareLabels ls (instAddr + 1)
@@ -83,7 +104,7 @@ parse [] _ _ = []
 parse (l:ls) instAddr e
   | null l             = parse ls instAddr e
   | head (head l) == '#' = parse ls instAddr e
-  {- | trace ("instAddr: " ++ show instAddr ++ " " ++ show l ++ "\n" ++ show e) False = undefined -}
+  | trace ("instAddr: " ++ show instAddr ++ " " ++ show l ++ "\n" ++ show e) False = undefined
   | isLabel l          = parse ls instAddr e
   | head l == "li"     = parseInstruction l instAddr e ++ parse ls (instAddr + 2) e
   | otherwise          = parseInstruction l instAddr e ++ parse ls (instAddr + 1) e
@@ -106,19 +127,19 @@ parseInstruction i instAddr e
   | head i == "mov.s"   = [ R ("010001", "10000", "00000", addr (i !! 2), addr (i !! 1), "000110") ]
   | head i == "addi"    = [ I ("001000", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16) ]
   | head i == "addiu"   = [ I ("001001", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16) ]
-  | head i == "beq"     = [ I ("000100", addr (i !! 1), addr (i !! 2), labelToAddr (i !! 3) instAddr e) ]
-  | head i == "bne"     = [ I ("000101", addr (i !! 1), addr (i !! 2), labelToAddr (i !! 3) instAddr e) ]
-  | head i == "blez"    = [ I ("000110", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e) ]
-  | head i == "bgez"    = [ I ("000001", addr (i !! 1), "00001",       labelToAddr (i !! 2) instAddr e) ]
-  | head i == "bgtz"    = [ I ("000111", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e) ]
-  | head i == "bltz"    = [ I ("000001", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e) ]
+  | head i == "beq"     = [ I ("000100", addr (i !! 1), addr (i !! 2), labelToAddr (i !! 3) instAddr e 16) ]
+  | head i == "bne"     = [ I ("000101", addr (i !! 1), addr (i !! 2), labelToAddr (i !! 3) instAddr e 16) ]
+  | head i == "blez"    = [ I ("000110", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e 16) ]
+  | head i == "bgez"    = [ I ("000001", addr (i !! 1), "00001",       labelToAddr (i !! 2) instAddr e 16) ]
+  | head i == "bgtz"    = [ I ("000111", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e 16) ]
+  | head i == "bltz"    = [ I ("000001", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e 16) ]
   | head i == "lui"     = [ I ("001111", "00000",       addr (i !! 1), binaryExp (read (i !! 2)) 16) ]
   | head i == "ori"     = [ I ("001101", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16) ]
   | head i == "lw"      = [ parseIndexedInstruction i ]
   | head i == "sw"      = [ parseIndexedInstruction i ]
   | head i == "lwc1"    = [ parseIndexedInstruction i ]
   | head i == "swc1"    = [ parseIndexedInstruction i ]
-  | head i == "jal"     = [ J ("000011", binaryExp (read (i !! 1)) 26) ]
+  | head i == "jal"     = [ J ("000011", labelToAddr (i !! 1) instAddr e 26) ]
   | head i == "c.olt.s" = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0100") ]
   | head i == "c.eq.s"  = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0010") ]
   | head i == "c.ole.s" = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0110") ]
@@ -194,10 +215,10 @@ extendEnv :: Environment -> String -> Int -> Environment
 extendEnv e label i = M.insert (take (length label - 1) label) i e
 
 -- ".label" e -> "0101010110...01"
-labelToAddr :: String -> Int -> Environment -> String
-labelToAddr label currentLine e = addrDiff
+labelToAddr :: String -> Int -> Environment -> Int -> String
+labelToAddr label currentLine e len = addrDiff
   where lineNum = fromMaybe undefined (M.lookup label e)
-        addrDiff = binaryExp (lineNum - currentLine) 16
+        addrDiff = binaryExp (lineNum - currentLine) len
 
 registerToAddress :: M.Map String String
 registerToAddress = M.fromList [ ("$r0",  "00000"), ("$zero", "00000")
