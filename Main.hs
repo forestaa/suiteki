@@ -220,6 +220,24 @@ labelToAddr label currentLine e len = addrDiff
   where lineNum = fromMaybe undefined (M.lookup label e)
         addrDiff = binaryExp (lineNum - currentLine) len
 
+-- Extract the code block of given |label|.
+-- e.g. if |instructions| is as follows:
+--   Label1:
+--     instrcution1 reg1, reg2
+--     instruction2 reg1, reg2
+--     ...
+--     instructionN reg1, reg2
+--   Label2:
+--     ...
+-- then the code block of |Label1| is
+--   [ "instruction1 reg1, reg2"
+--   , "instruction2 reg1, reg2"
+--   , ...
+--   , "instructionN reg1, reg2"
+--   ]
+extractCodeBlock :: String -> [[String]] -> [[String]]
+extractCodeBlock label instructions = takeWhile (\i -> not (isLabel i)) $ drop 1 $ dropWhile (\i -> i /= [label ++ ":"]) instructions
+
 registerToAddress :: M.Map String String
 registerToAddress = M.fromList [ ("$r0",  "00000"), ("$zero", "00000")
                                , ("$r1",  "00001"), ("$sw",   "00001")
