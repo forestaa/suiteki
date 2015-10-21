@@ -16,16 +16,20 @@ import qualified Data.Map as M
 type InstructionR         = (String, String, String, String, String, String)
 type InstructionI         = (String, String, String, String)
 type InstructionJ         = (String, String)
+type InstructionJR        = (String, String, String, String, String)
 type InstructionFPCompare = (String, String, String, String, String, String, String, String, String)
 type InstructionFPBranch  = (String, String, String, String, String, String)
 type InstructionFPMove    = (String, String, String, String, String)
+type Syscall              = (String, String, String)
 
 data Instruction = R InstructionR
                  | I InstructionI
                  | J InstructionJ
+                 | JR InstructionJR
                  | FPC InstructionFPCompare
                  | FPB InstructionFPBranch
                  | FPM InstructionFPMove
+                 | S Syscall
 
 type Environment = M.Map String Int
 
@@ -59,14 +63,16 @@ main = execParser opts >>= writeBinary
 writeBinary :: Args -> IO ()
 writeBinary args = do
   ss <- readFile (assembly args)
-  let ls = map words $ lines ss
-  let labels = prepareLabels ls 0
-  let ext = externalFunctions ls labels
-  putStrLn "---"
-  putStrLn $ show labels
-  putStrLn $ show ext
-  putStrLn "---"
-  let parsed = constructByteString $ translateInstructions $ parse ls 0 labels
+  let instructions = map words $ lines ss
+  let labels = prepareLabels instructions 0
+
+  lib <- readFile (library args)
+  let ys = map words $ lines lib
+
+  let instructionClosure = enrichInstructions (externalFunctions instructions labels) instructions ys
+  let labelClosure = prepareLabels instructionClosure 0
+
+  let parsed = constructByteString $ translateInstructions $ parse instructionClosure 0 labelClosure
   B.writeFile (output args) parsed
   setFileMode (output args) permission
     where
@@ -75,6 +81,16 @@ writeBinary args = do
                    `unionFileModes` groupExecuteMode
                    `unionFileModes` otherReadMode
                    `unionFileModes` otherExecuteMode
+
+-- read library and add instructions recursively until there is no external
+-- function.
+enrichInstructions :: [String] -> [[String]] -> [[String]] -> [[String]]
+enrichInstructions [] is _ = is
+enrichInstructions (e:es) is lib = enrichInstructions (ext ++ es) is' lib
+  where
+    is'    = is ++ extractCodeBlock e lib
+    labels = prepareLabels is' 0
+    ext    = externalFunctions is' labels
 
 constructByteString :: [String] -> B.ByteString
 constructByteString = foldr (B.append . convertBinaryStringToBinary) B.empty
@@ -89,9 +105,11 @@ instructionToBinaryString :: Instruction -> String
 instructionToBinaryString (R (opcode, rs, rt, rd, shamt, funct)) = opcode ++ rs ++ rt ++ rd ++ shamt ++ funct
 instructionToBinaryString (I (opcode, rs, rt, addressOrImmediate)) = opcode ++ rs ++ rt ++ addressOrImmediate
 instructionToBinaryString (J (opcode, address)) = opcode ++ address
+instructionToBinaryString (JR (special, rs, zero, hint, opCode)) = special ++ rs ++ zero ++ hint ++ opCode
 instructionToBinaryString (FPC (opcode, fmt, ft, fs, cc, zero, a, fc, cond)) = opcode ++ fmt ++ ft ++ fs ++ cc ++ zero ++ a ++ a ++ fc ++ cond
 instructionToBinaryString (FPB (cop1, bc, cc, nd, td, offset)) = cop1 ++ bc ++ cc ++ nd ++ td ++ offset
 instructionToBinaryString (FPM (cop1, mt, rt, fs, zero)) = cop1 ++ mt ++ rt ++ fs ++ zero
+instructionToBinaryString (S (special, code, opCode)) = special ++ code ++ opCode
 
 prepareLabels :: [[String]] -> Int -> Environment
 prepareLabels [] _ = M.empty
@@ -164,6 +182,7 @@ parseInstruction i instAddr e
   | head i == "lwc1"    = [ parseIndexedInstruction i ]
   | head i == "swc1"    = [ parseIndexedInstruction i ]
   | head i == "jal"     = [ J ("000011", labelToAddr (i !! 1) instAddr e 26) ]
+  | head i == "jr"      = [ JR ("00000", addr (i !! 1), "0000000000", "00000", "001000") ]
   | head i == "c.olt.s" = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0100") ]
   | head i == "c.eq.s"  = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0010") ]
   | head i == "c.ole.s" = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0110") ]
@@ -172,6 +191,7 @@ parseInstruction i instAddr e
   | head i == "mtc1"    = [ FPM ("010001", "00100", addr (i !! 1), addrF (i !! 2), "0000000000") ]
   | head i == "li"      = expandLI i instAddr e
   | head i == "move"    = expandMOVE i instAddr e
+  | head i == "syscall" = [ S ("000000", "00000000000000000000", "001100") ]
   | otherwise           = []
 
 -- lw $t0, 4($gp) -> I (opcode, $gp, $rt, <4 in binary>)
@@ -261,7 +281,7 @@ labelToAddr label currentLine e len = addrDiff
 --   ]
 -- This function is used to extract a specific part of libmincaml.S.
 extractCodeBlock :: String -> [[String]] -> [[String]]
-extractCodeBlock label instructions = takeWhile (\i -> not (isLabel i)) $ drop 1 $ dropWhile (\i -> i /= [label ++ ":"]) instructions
+extractCodeBlock label instructions = takeWhile (\i -> i == [label ++ ":"] || not (isLabel i)) $ dropWhile (\i -> i /= [label ++ ":"]) instructions
 
 registerToAddress :: M.Map String String
 registerToAddress = M.fromList [ ("$r0",  "00000"), ("$zero", "00000")
