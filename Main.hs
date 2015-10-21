@@ -4,7 +4,7 @@ import Data.Char
 import Data.Maybe
 import Debug.Trace
 import Data.Binary
-import Data.List (foldl')
+import Data.List
 import Numeric
 import System.Environment
 import System.Posix.Files
@@ -61,6 +61,11 @@ writeBinary args = do
   ss <- readFile (assembly args)
   let ls = map words $ lines ss
   let labels = prepareLabels ls 0
+  let ext = externalFunctions ls labels
+  putStrLn "---"
+  putStrLn $ show labels
+  putStrLn $ show ext
+  putStrLn "---"
   let parsed = constructByteString $ translateInstructions $ parse ls 0 labels
   B.writeFile (output args) parsed
   setFileMode (output args) permission
@@ -91,20 +96,39 @@ instructionToBinaryString (FPM (cop1, mt, rt, fs, zero)) = cop1 ++ mt ++ rt ++ f
 prepareLabels :: [[String]] -> Int -> Environment
 prepareLabels [] _ = M.empty
 prepareLabels (l:ls) instAddr
-  | trace (show instAddr ++ ": " ++ show l) False = undefined
+  {- | trace (show instAddr ++ ": " ++ show l ++ ", head: " ++ show (head l)) False = undefined -}
   | null l               = prepareLabels ls instAddr
   | head (head l) == '#' = prepareLabels ls instAddr
   | isLabel l            = extendEnv (prepareLabels ls (instAddr + 1)) (head l) (instAddr + 1)
   | head l == "li"       = prepareLabels ls (instAddr + 2)
   | otherwise            = prepareLabels ls (instAddr + 1)
 
+-- collect all the labels appears in the given assembly.
+allLabels :: [[String]] -> [String]
+allLabels [] = []
+allLabels (l:ls)
+  | null l = allLabels ls
+  | isLabel l = (take (length (head l) - 1) (head l)) : allLabels ls
+  | head l == "beq" = (l !! 3) : allLabels ls
+  | head l == "bne" = (l !! 3) : allLabels ls
+  | head l == "blez" = (l !! 3) : allLabels ls
+  | head l == "bgez" = (l !! 3) : allLabels ls
+  | head l == "bgtz" = (l !! 3) : allLabels ls
+  | head l == "bltz" = (l !! 3) : allLabels ls
+  | head l == "jal" = (l !! 1) : allLabels ls
+  | otherwise = allLabels ls
+
+-- collect funtions which is not defined in the given assembly.
+externalFunctions :: [[String]] -> Environment -> [String]
+externalFunctions instructions e = (nub $ allLabels instructions) \\ localLabels
+  where localLabels = map (\(k, a) -> k) $ M.toList e
 
 parse :: [[String]] -> Int -> Environment -> [Instruction]
 parse [] _ _ = []
 parse (l:ls) instAddr e
   | null l             = parse ls instAddr e
   | head (head l) == '#' = parse ls instAddr e
-  | trace ("instAddr: " ++ show instAddr ++ " " ++ show l ++ "\n" ++ show e) False = undefined
+  {- | trace ("instAddr: " ++ show instAddr ++ " " ++ show l ++ "\n" ++ show e) False = undefined -}
   | isLabel l          = parse ls instAddr e
   | head l == "li"     = parseInstruction l instAddr e ++ parse ls (instAddr + 2) e
   | otherwise          = parseInstruction l instAddr e ++ parse ls (instAddr + 1) e
