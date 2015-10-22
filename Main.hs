@@ -13,23 +13,7 @@ import qualified Data.ByteString.Lazy as B
 import qualified Data.Graph as G
 import qualified Data.Map as M
 
-type InstructionR         = (String, String, String, String, String, String)
-type InstructionI         = (String, String, String, String)
-type InstructionJ         = (String, String)
-type InstructionJR        = (String, String, String, String, String)
-type InstructionFPCompare = (String, String, String, String, String, String, String, String, String)
-type InstructionFPBranch  = (String, String, String, String, String, String)
-type InstructionFPMove    = (String, String, String, String, String)
-type Syscall              = (String, String, String)
-
-data Instruction = R InstructionR
-                 | I InstructionI
-                 | J InstructionJ
-                 | JR InstructionJR
-                 | FPC InstructionFPCompare
-                 | FPB InstructionFPBranch
-                 | FPM InstructionFPMove
-                 | S Syscall
+type Instruction = [String]
 
 type Environment = M.Map String Int
 
@@ -100,14 +84,7 @@ translateInstructions :: [Instruction] -> [String]
 translateInstructions = map instructionToBinaryString
 
 instructionToBinaryString :: Instruction -> String
-instructionToBinaryString (R (opcode, rs, rt, rd, shamt, funct)) = opcode ++ rs ++ rt ++ rd ++ shamt ++ funct
-instructionToBinaryString (I (opcode, rs, rt, addressOrImmediate)) = opcode ++ rs ++ rt ++ addressOrImmediate
-instructionToBinaryString (J (opcode, address)) = opcode ++ address
-instructionToBinaryString (JR (special, rs, zero, hint, opCode)) = special ++ rs ++ zero ++ hint ++ opCode
-instructionToBinaryString (FPC (opcode, fmt, ft, fs, cc, zero, a, fc, cond)) = opcode ++ fmt ++ ft ++ fs ++ cc ++ zero ++ a ++ a ++ fc ++ cond
-instructionToBinaryString (FPB (cop1, bc, cc, nd, td, offset)) = cop1 ++ bc ++ cc ++ nd ++ td ++ offset
-instructionToBinaryString (FPM (cop1, mt, rt, fs, zero)) = cop1 ++ mt ++ rt ++ fs ++ zero
-instructionToBinaryString (S (special, code, opCode)) = special ++ code ++ opCode
+instructionToBinaryString = foldl (\acc x -> acc ++ x) ""
 
 prepareLabels :: [[String]] -> Int -> Environment
 prepareLabels [] _ = M.empty
@@ -151,54 +128,54 @@ parse (l:ls) instAddr e
 
 parseInstruction :: [String] -> Int -> Environment -> [Instruction]
 parseInstruction i instAddr e
-  | head i == "add"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100000") ]
-  | head i == "sub"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100010") ]
-  | head i == "slt"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "101010") ]
-  | head i == "and"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100100") ]
-  | head i == "or"      = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100101") ]
-  | head i == "xor"     = [ R ("000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100110") ]
-  | head i == "jalr"    = [ R ("000000", addr (i !! 2), "00000", addr (i !! 1), "00000", "001001") ] -- hint?
-  | head i == "sll"     = [ R ("000000", "00000", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 5, "000000") ]
-  | head i == "srl"     = [ R ("000000", "00000", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 5, "000010") ]
-  | head i == "add.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000000") ]
-  | head i == "sub.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000001") ]
-  | head i == "mul.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000010") ]
-  | head i == "div.s"   = [ R ("010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000011") ]
-  | head i == "mov.s"   = [ R ("010001", "10000", "00000", addr (i !! 2), addr (i !! 1), "000110") ]
-  | head i == "addi"    = [ I ("001000", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16) ]
-  | head i == "addiu"   = [ I ("001001", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16) ]
-  | head i == "beq"     = [ I ("000100", addr (i !! 1), addr (i !! 2), labelToAddr (i !! 3) instAddr e 16) ]
-  | head i == "bne"     = [ I ("000101", addr (i !! 1), addr (i !! 2), labelToAddr (i !! 3) instAddr e 16) ]
-  | head i == "blez"    = [ I ("000110", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e 16) ]
-  | head i == "bgez"    = [ I ("000001", addr (i !! 1), "00001",       labelToAddr (i !! 2) instAddr e 16) ]
-  | head i == "bgtz"    = [ I ("000111", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e 16) ]
-  | head i == "bltz"    = [ I ("000001", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e 16) ]
-  | head i == "lui"     = [ I ("001111", "00000",       addr (i !! 1), binaryExp (read (i !! 2)) 16) ]
-  | head i == "ori"     = [ I ("001101", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16) ]
+  | head i == "add"     = [ [ "000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100000" ] ]
+  | head i == "sub"     = [ [ "000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100010" ] ]
+  | head i == "slt"     = [ [ "000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "101010" ] ]
+  | head i == "and"     = [ [ "000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100100" ] ]
+  | head i == "or"      = [ [ "000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100101" ] ]
+  | head i == "xor"     = [ [ "000000", addr (i !! 2), addr (i !! 3), addr (i !! 1), "00000", "100110" ] ]
+  | head i == "jalr"    = [ [ "000000", addr (i !! 2), "00000", addr (i !! 1), "00000", "001001" ] ]
+  | head i == "sll"     = [ [ "000000", "00000", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 5, "000000" ] ]
+  | head i == "srl"     = [ [ "000000", "00000", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 5, "000010" ] ]
+  | head i == "add.s"   = [ [ "010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000000" ] ]
+  | head i == "sub.s"   = [ [ "010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000001" ] ]
+  | head i == "mul.s"   = [ [ "010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000010" ] ]
+  | head i == "div.s"   = [ [ "010001", "10000", addr (i !! 3), addr (i !! 2), addr (i !! 1), "000011" ] ]
+  | head i == "mov.s"   = [ [ "010001", "10000", "00000", addr (i !! 2), addr (i !! 1), "000110" ] ]
+  | head i == "addi"    = [ [ "001000", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16 ] ]
+  | head i == "addiu"   = [ [ "001001", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16 ] ]
+  | head i == "beq"     = [ [ "000100", addr (i !! 1), addr (i !! 2), labelToAddr (i !! 3) instAddr e 16 ] ]
+  | head i == "bne"     = [ [ "000101", addr (i !! 1), addr (i !! 2), labelToAddr (i !! 3) instAddr e 16 ] ]
+  | head i == "blez"    = [ [ "000110", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e 16 ] ]
+  | head i == "bgez"    = [ [ "000001", addr (i !! 1), "00001",       labelToAddr (i !! 2) instAddr e 16 ] ]
+  | head i == "bgtz"    = [ [ "000111", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e 16 ] ]
+  | head i == "bltz"    = [ [ "000001", addr (i !! 1), "00000",       labelToAddr (i !! 2) instAddr e 16 ] ]
+  | head i == "lui"     = [ [ "001111", "00000",       addr (i !! 1), binaryExp (read (i !! 2)) 16 ] ]
+  | head i == "ori"     = [ [ "001101", addr (i !! 2), addr (i !! 1), binaryExp (read (i !! 3)) 16 ] ]
   | head i == "lw"      = [ parseIndexedInstruction i ]
   | head i == "sw"      = [ parseIndexedInstruction i ]
   | head i == "lwc1"    = [ parseIndexedInstruction i ]
   | head i == "swc1"    = [ parseIndexedInstruction i ]
-  | head i == "jal"     = [ J ("000011", labelToAddr (i !! 1) instAddr e 26) ]
-  | head i == "jr"      = [ JR ("00000", addr (i !! 1), "0000000000", "00000", "001000") ]
-  | head i == "c.olt.s" = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0100") ]
-  | head i == "c.eq.s"  = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0010") ]
-  | head i == "c.ole.s" = [ FPC ("010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0110") ]
-  | head i == "bc1t"    = [ FPB ("010001", "01000", addrCC (i !! 1), "0", "1", binaryExp (read (i !! 2)) 16) ]
-  | head i == "mfc1"    = [ FPM ("010001", "00000", addr (i !! 1), addrF (i !! 2), "0000000000") ]
-  | head i == "mtc1"    = [ FPM ("010001", "00100", addr (i !! 1), addrF (i !! 2), "0000000000") ]
+  | head i == "jal"     = [ [ "000011", labelToAddr (i !! 1) instAddr e 26 ] ]
+  | head i == "jr"      = [ [ "00000", addr (i !! 1), "0000000000", "00000", "001000" ] ]
+  | head i == "c.olt.s" = [ [ "010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0100" ] ]
+  | head i == "c.eq.s"  = [ [ "010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0010" ] ]
+  | head i == "c.ole.s" = [ [ "010001", "10000", addrF (i !! 3), addrF (i !! 2), addrCC (i !! 1), "0", "0", "11", "0110" ] ]
+  | head i == "bc1t"    = [ [ "010001", "01000", addrCC (i !! 1), "0", "1", binaryExp (read (i !! 2)) 16 ] ]
+  | head i == "mfc1"    = [ [ "010001", "00000", addr (i !! 1), addrF (i !! 2), "0000000000" ] ]
+  | head i == "mtc1"    = [ [ "010001", "00100", addr (i !! 1), addrF (i !! 2), "0000000000" ] ]
   | head i == "li"      = expandLI i instAddr e
   | head i == "move"    = expandMOVE i instAddr e
-  | head i == "syscall" = [ S ("000000", "00000000000000000000", "001100") ]
+  | head i == "syscall" = [ [ "000000", "00000000000000000000", "001100" ] ]
   | otherwise           = []
 
 -- lw $t0, 4($gp) -> I (opcode, $gp, $rt, <4 in binary>)
 parseIndexedInstruction :: [String] -> Instruction
 parseIndexedInstruction i -- = I (opCode, base, rt, offset)
-  | head i == "lw"   = I ("100011", base, addr (i !! 1), offset)
-  | head i == "sw"   = I ("101011", base, addr (i !! 1), offset)
-  | head i == "lwc1" = I ("110001", base, addr (i !! 1), offset)
-  | head i == "swc1" = I ("111001", base, addr (i !! 1), offset)
+  | head i == "lw"   = [ "100011", base, addr (i !! 1), offset ]
+  | head i == "sw"   = [ "101011", base, addr (i !! 1), offset ]
+  | head i == "lwc1" = [ "110001", base, addr (i !! 1), offset ]
+  | head i == "swc1" = [ "111001", base, addr (i !! 1), offset ]
   | otherwise = undefined
   where (baseRegName, immediateInDigit) = parseRegisterWithOffset (i !! 2)
         offset = binaryExp (read immediateInDigit) 16
