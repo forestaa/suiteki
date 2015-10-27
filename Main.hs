@@ -106,10 +106,10 @@ allLabels (l:ls)
     | isLabel l = (take (length (head l) - 1) (head l)) : allLabels ls
     | head l == "beq" = (l !! 3) : allLabels ls
     | head l == "bne" = (l !! 3) : allLabels ls
-    | head l == "blez" = (l !! 3) : allLabels ls
-    | head l == "bgez" = (l !! 3) : allLabels ls
-    | head l == "bgtz" = (l !! 3) : allLabels ls
-    | head l == "bltz" = (l !! 3) : allLabels ls
+    | head l == "blez" = (l !! 2) : allLabels ls
+    | head l == "bgez" = (l !! 2) : allLabels ls
+    | head l == "bgtz" = (l !! 2) : allLabels ls
+    | head l == "bltz" = (l !! 2) : allLabels ls
     | head l == "jal" = (l !! 1) : allLabels ls
     | otherwise = allLabels ls
 
