@@ -4,6 +4,7 @@ import Data.Char
 import Data.Maybe
 import Debug.Trace
 import Data.Binary
+import Data.Binary.Put
 import Data.List
 import Numeric
 import System.Environment
@@ -81,7 +82,9 @@ constructByteString :: [String] -> B.ByteString
 constructByteString = foldr (B.append . convertBinaryStringToBinary) B.empty
 
 convertBinaryStringToBinary :: String -> B.ByteString
-convertBinaryStringToBinary bstr = encode (fromIntegral $ toDec bstr :: Word32)
+convertBinaryStringToBinary bstr = runPut $ putWord32le w
+  where
+    w = fromIntegral $ toDec bstr :: Word32
 
 toString :: [Instruction] -> [String]
 toString = map instructionToBinaryString
