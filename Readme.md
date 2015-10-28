@@ -1,6 +1,7 @@
 ## build
 ```
 $ git clone http://github.com/rikatze/suiteki.git
+
 $ cd suiteki
 
 # Install dependencies
