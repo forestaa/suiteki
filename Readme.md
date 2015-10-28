@@ -2,8 +2,16 @@
 ```
 $ git clone http://github.com/rikatze/suiteki.git
 $ cd suiteki
-$ cabal install # install dependencies
+
+# Install dependencies
+$ cabal install
+
+# Build the assembler
 $ cabal build
-$ ./dist/build/suiteki/suiteki ./sample/sample.S -o ./output -l path/to/lib
+
+# Note that you can replace "./dist/build/suiteki/suiteki" with "cabal run -- "
+$ ./dist/build/suiteki/suiteki ./test/fib.s -o ./output -l ./lib/libmincaml.S
+
+# Show output
 $ xxd -b -c 4 output  # or whatever you want
 ```
