@@ -71,7 +71,7 @@ writeBinary args = do
 -- read library and add instructions recursively until there is no external
 -- function.
 enrichInstructions :: [String] -> [[String]] -> [[String]] -> [[String]]
-enrichInstructions [] is _ = is
+enrichInstructions [] is _ = is ++ [["magic"]]
 enrichInstructions (e:es) is lib = enrichInstructions (ext ++ es) is' lib
   where
     is'    = is ++ extractCodeBlock e lib
@@ -378,6 +378,7 @@ parseInstruction i pc e
                               , "001100"
                               ]
                             ]
+    | head i == "magic"   = [ [ "11111111111111111111111111111111" ] ]
     | otherwise           = []
 
 -- lw $t0, 4($gp) -> I (opcode, $gp, $rt, <4 in binary>)
