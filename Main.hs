@@ -486,7 +486,7 @@ registerToAddress :: M.Map String String
 registerToAddress = M.fromList [ ("$r0",   "00000")
                                , ("$zero", "00000")
                                , ("$r1",   "00001")
-                               , ("$sw",   "00001")
+                               , ("$at",   "00001")
                                , ("$r2",   "00010")
                                , ("$v0",   "00010")
                                , ("$r3",   "00011")
