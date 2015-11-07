@@ -58,7 +58,12 @@ writeBinary args = do
     let is' = enrichInstructions (externalFunctions is labels) is ys
     let labels' = prepareLabels is' 0
 
-    let parsed = constructByteString . toString $ parse is' 0 labels'
+    putStrLn $ show labels'
+
+    -- entry point
+    let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labels')) 32]
+
+    let parsed = constructByteString . toString $ (ep : parse is' 0 labels')
     B.writeFile (output args) parsed
     setFileMode (output args) permission
   where
@@ -97,7 +102,7 @@ prepareLabels [] _ = M.empty
 prepareLabels (l:ls) pc
     | null l               = prepareLabels ls pc
     | head (head l) == '#' = prepareLabels ls pc
-    | isLabel l            = extendEnv (prepareLabels ls (pc + 1)) (head l) (pc + 1)
+    | isLabel l            = extendEnv (prepareLabels ls pc) (head l) pc
     | head l == "li"       = prepareLabels ls (pc + 2)
     | otherwise            = prepareLabels ls (pc + 1)
 
@@ -448,7 +453,7 @@ binaryExp num len
     bn = showIntAtBase 2 intToDigit (2 ^ len + num) ""
 
 isLabel :: [String] -> Bool
-isLabel i = length i == 1 && drop (length (head i) - 1) (head i) == ":"
+isLabel i = drop (length (head i) - 1) (head i) == ":"
 
 extendEnv :: Environment -> String -> Int -> Environment
 extendEnv e label i = M.insert (take (length label - 1) label) i e
