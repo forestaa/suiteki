@@ -14,9 +14,16 @@ import qualified Data.ByteString.Lazy as B
 import qualified Data.Graph as G
 import qualified Data.Map as M
 
+type Asm = [String]
+
+type AsmProg = [Asm]
+
 type Instruction = [String]
 
 type Environment = M.Map String Int
+
+-- "x1" -> (the address of x1 in memory, in string (e.g. "10101111"))
+type DataMap = M.Map String String
 
 data Args = Args { assembly :: String
                  , output :: String
@@ -58,7 +65,8 @@ writeBinary args = do
     let is' = enrichInstructions (externalFunctions is labels) is ys
     let labels' = prepareLabels is' 0
 
-    putStrLn $ show labels'
+    putStrLn $ show $ extractData is'
+    putStrLn $ show $ extractText is'
 
     -- entry point
     let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labels')) 32]
@@ -486,6 +494,32 @@ extractCodeBlock label is = takeWhile p1 $ dropWhile p2 is
   where
     p1 = (\i -> i == [label ++ ":"] || not (isLabel i))
     p2 = (\i -> i /= [label ++ ":"])
+
+extractData :: [[String]] -> [[[String]]]
+extractData [] = []
+extractData xs@(i:is)
+    | head i == ".data" = ys : (extractData $ drop (length ys) xs)
+    | head i == ".text" = extractData $ dropWhile p2 xs
+    | otherwise         = extractData is
+  where
+    p1 = \asm -> head asm /= ".data" && head asm /= ".text"
+    ys = takeWhile p1 $ drop 1 xs
+    p2 = \asm -> head asm /= ".data"
+
+storeData :: [[String]] -> DataMap
+storeData = undefined
+
+-- Instructions without ".data" section
+extractText :: [[String]] -> [[[String]]]
+extractText [] = []
+extractText xs@(i:is)
+    | head i == ".text" = ys : (extractText $ drop (length ys) xs)
+    | head i == ".data" = extractText $ dropWhile p2 xs
+    | otherwise         = extractText is
+  where
+    p1 = \asm -> head asm /= ".data" && head asm /= ".text"
+    ys = takeWhile p1 $ drop 1 xs
+    p2 = \asm -> head asm /= ".text"
 
 registerToAddress :: M.Map String String
 registerToAddress = M.fromList [ ("$r0",   "00000")
