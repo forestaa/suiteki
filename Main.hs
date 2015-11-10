@@ -57,21 +57,21 @@ writeBinary :: Args -> IO ()
 writeBinary args = do
     ss <- readFile (assembly args)
     let is = map words $ lines ss -- instructions
-    let labels = prepareLabels (map words $ lines ss) 0
+    let labels = prepareLabels (head $ extractText is) 0
 
     lib <- readFile (library args)
     let ys = map words $ lines lib
 
     let is' = enrichInstructions (externalFunctions is labels) is ys
-    let labels' = prepareLabels is' 0
 
-    let dataMap = constructDataMap (concat $ extractData is') 0
+    let dataMap = constructDataMap (concat $ extractData is') (2 ^ 16)
     let dataList = parseDataMap dataMap
 
-    -- entry point
-    let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labels')) 32]
+    let is'' = expandLabelInLWC1 (head $ extractText is') dataMap
 
-    let parsed = parse is' 0 labels' dataMap
+    let labels' = prepareLabels is'' 0
+    let parsed = parse is'' 0 labels' dataMap
+    let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labels')) 32]
 
     let machineCode = dataList ++ [[magicNumber]] ++ [ep] ++ parsed
 
@@ -85,6 +85,20 @@ writeBinary args = do
                  `unionFileModes` groupExecuteMode
                  `unionFileModes` otherReadMode
                  `unionFileModes` otherExecuteMode
+
+expandLabelInLWC1 :: [[String]] -> DataMap -> [[String]]
+expandLabelInLWC1 [] dm = []
+expandLabelInLWC1 (i:is) dm
+    | head i == "lwc1" && head baseName /= '$' = [ [ "li", "$ra", base ]
+                                                 , [ "lwc1", i !! 1, "0($ra)" ]
+                                                 ] ++ expandLabelInLWC1 is dm
+    | otherwise = i : expandLabelInLWC1 is dm
+  where
+    (baseName, immediateInDigit) = parseRegisterWithOffset (i !! 2)
+    offset = binaryExp (read immediateInDigit) 16
+    base = if head baseName == '$'
+             then addr baseName
+             else fst $ searchLabelInDataMap baseName dm
 
 -- read library and add instructions recursively until there is no external
 -- function.
@@ -117,6 +131,7 @@ prepareLabels (l:ls) pc
     | head (head l) == '#' = prepareLabels ls pc
     | isLabel l            = extendEnv (prepareLabels ls pc) (head l) pc
     | head l == "li"       = prepareLabels ls (pc + 2)
+    | head l == ".text"    = prepareLabels ls pc
     | otherwise            = prepareLabels ls (pc + 1)
 
 -- collect all the labels appears in the given assembly.
@@ -319,10 +334,10 @@ parseInstruction i pc e dm
                               , binaryExp (read (i !! 3)) 16
                               ]
                             ]
-    | head i == "lw"      = [ parseIndexedInstruction i dm ]
-    | head i == "sw"      = [ parseIndexedInstruction i dm ]
-    | head i == "lwc1"    = [ parseIndexedInstruction i dm ]
-    | head i == "swc1"    = [ parseIndexedInstruction i dm ]
+    | head i == "lw"      = parseIndexedInstruction i e dm
+    | head i == "sw"      = parseIndexedInstruction i e dm
+    | head i == "lwc1"    = parseIndexedInstruction i e dm
+    | head i == "swc1"    = parseIndexedInstruction i e dm
     | head i == "jal"     = [ [ "000011"
                               , labelToAddr (i !! 1) pc e 26
                               ]
@@ -405,12 +420,13 @@ searchLabelInDataMap label dm = fromMaybe undefined $ lookup label dm
 -- lw $t0, 4($baseName) -> I (opcode, $baseName, $rt, <4 in binary>)
 -- If the base name is not prefixed by '$', then the name is regarded as
 -- a label (that is, not a register name).
-parseIndexedInstruction :: [String] -> DataMap -> Instruction
-parseIndexedInstruction i dm -- = I (opCode, base, rt, offset)
-    | head i == "lw"   = [ "100011", base, addr (i !! 1), offset ]
-    | head i == "sw"   = [ "101011", base, addr (i !! 1), offset ]
-    | head i == "lwc1" = [ "110001", base, addrF (i !! 1), offset ]
-    | head i == "swc1" = [ "111001", base, addrF (i !! 1), offset ]
+parseIndexedInstruction :: [String] -> Environment -> DataMap -> [Instruction]
+parseIndexedInstruction i e dm -- = I (opCode, base, rt, offset)
+    | head i == "lw"   = [ [ "100011", base, addr (i !! 1), offset ] ]
+    | head i == "sw"   = [ [ "101011", base, addr (i !! 1), offset ] ]
+    {- | head i == "lwc1"&& head baseName == '$' = [ [ "110001", base, addrF (i !! 1), offset ] ] -}
+    | head i == "lwc1" = [ [ "110001", base, addrF (i !! 1), offset ] ]
+    | head i == "swc1" = [ [ "111001", base, addrF (i !! 1), offset ] ]
     | otherwise = undefined
   where
     (baseName, immediateInDigit) = parseRegisterWithOffset (i !! 2)
@@ -522,7 +538,7 @@ extractData xs@(i:is)
 constructDataMap :: [[String]] -> Int -> [(String, (String, String))]
 constructDataMap [] hp = []
 constructDataMap [x] hp = undefined
-constructDataMap (l:v:xs) hp = (label, (binaryExp hp 5, binaryExp value 32)) : constructDataMap xs (hp + 1)
+constructDataMap (l:v:xs) hp = (label, (show hp, binaryExp value 32)) : constructDataMap xs (hp + 1)
   where
     label = takeWhile (\c -> c /= ':') $ head l
     value = read (v !! 1) :: Int  -- value = [".word", "11001100"] !! 1 = "11001100"
