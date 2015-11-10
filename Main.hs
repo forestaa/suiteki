@@ -22,8 +22,8 @@ type Instruction = [String]
 
 type Environment = M.Map String Int
 
--- "x1" -> (the address of x1 in memory, in string (e.g. "10101111"))
-type DataMap = M.Map String String
+-- [("x1", (<address>, <value>)), ...]
+type DataMap = [(String, (String, String))]
 
 data Args = Args { assembly :: String
                  , output :: String
@@ -65,16 +65,21 @@ writeBinary args = do
     let is' = enrichInstructions (externalFunctions is labels) is ys
     let labels' = prepareLabels is' 0
 
-    putStrLn $ show $ extractData is'
-    putStrLn $ show $ extractText is'
+    let dataMap = constructDataMap (concat $ extractData is') 0
+    let dataList = parseDataMap dataMap
 
     -- entry point
     let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labels')) 32]
 
-    let parsed = constructByteString . toString $ (ep : parse is' 0 labels')
+    let parsed = parse is' 0 labels' dataMap
+
+    let machineCode = dataList ++ [[magicNumber]] ++ [ep] ++ parsed
+
+    let parsed = constructByteString . toString $ machineCode
     B.writeFile (output args) parsed
     setFileMode (output args) permission
   where
+    magicNumber = "01110000000000000000000000111111"
     permission = ownerModes
                  `unionFileModes` groupReadMode
                  `unionFileModes` groupExecuteMode
@@ -134,17 +139,17 @@ externalFunctions :: [[String]] -> Environment -> [String]
 externalFunctions instructions e = (nub $ allLabels instructions) \\ locals
   where locals = map (\(k, a) -> k) $ M.toList e
 
-parse :: [[String]] -> Int -> Environment -> [Instruction]
-parse [] _ _ = []
-parse (l:ls) pc e
-    | null l               = parse ls pc e
-    | head (head l) == '#' = parse ls pc e
-    | isLabel l            = parse ls pc e
-    | head l == "li"       = parseInstruction l pc e ++ parse ls (pc + 2) e
-    | otherwise            = parseInstruction l pc e ++ parse ls (pc + 1) e
+parse :: [[String]] -> Int -> Environment -> DataMap -> [Instruction]
+parse [] _ _ _ = []
+parse (l:ls) pc e dm
+    | null l               = parse ls pc e dm
+    | head (head l) == '#' = parse ls pc e dm
+    | isLabel l            = parse ls pc e dm
+    | head l == "li"       = parseInstruction l pc e dm ++ parse ls (pc + 2) e dm
+    | otherwise            = parseInstruction l pc e dm ++ parse ls (pc + 1) e dm
 
-parseInstruction :: [String] -> Int -> Environment -> [Instruction]
-parseInstruction i pc e
+parseInstruction :: [String] -> Int -> Environment -> DataMap -> [Instruction]
+parseInstruction i pc e dm
     | head i == "add"     = [ [ "000000"
                               , addr (i !! 2)
                               , addr (i !! 3)
@@ -314,10 +319,10 @@ parseInstruction i pc e
                               , binaryExp (read (i !! 3)) 16
                               ]
                             ]
-    | head i == "lw"      = [ parseIndexedInstruction i ]
-    | head i == "sw"      = [ parseIndexedInstruction i ]
-    | head i == "lwc1"    = [ parseIndexedInstruction i ]
-    | head i == "swc1"    = [ parseIndexedInstruction i ]
+    | head i == "lw"      = [ parseIndexedInstruction i dm ]
+    | head i == "sw"      = [ parseIndexedInstruction i dm ]
+    | head i == "lwc1"    = [ parseIndexedInstruction i dm ]
+    | head i == "swc1"    = [ parseIndexedInstruction i dm ]
     | head i == "jal"     = [ [ "000011"
                               , labelToAddr (i !! 1) pc e 26
                               ]
@@ -384,8 +389,8 @@ parseInstruction i pc e
                               , "0000000000"
                               ]
                             ]
-    | head i == "li"      = expandLI i pc e
-    | head i == "move"    = expandMOVE i pc e
+    | head i == "li"      = expandLI i pc e dm
+    | head i == "move"    = expandMOVE i pc e dm
     | head i == "syscall" = [ [ "000000"
                               , "00000000000000000000"
                               , "001100"
@@ -394,18 +399,25 @@ parseInstruction i pc e
     | head i == "magic"   = [ [ "11111111111111111111111111111111" ] ]
     | otherwise           = []
 
--- lw $t0, 4($gp) -> I (opcode, $gp, $rt, <4 in binary>)
-parseIndexedInstruction :: [String] -> Instruction
-parseIndexedInstruction i -- = I (opCode, base, rt, offset)
+searchLabelInDataMap :: String -> DataMap -> (String, String)
+searchLabelInDataMap label dm = fromMaybe undefined $ lookup label dm
+
+-- lw $t0, 4($baseName) -> I (opcode, $baseName, $rt, <4 in binary>)
+-- If the base name is not prefixed by '$', then the name is regarded as
+-- a label (that is, not a register name).
+parseIndexedInstruction :: [String] -> DataMap -> Instruction
+parseIndexedInstruction i dm -- = I (opCode, base, rt, offset)
     | head i == "lw"   = [ "100011", base, addr (i !! 1), offset ]
     | head i == "sw"   = [ "101011", base, addr (i !! 1), offset ]
-    | head i == "lwc1" = [ "110001", base, addr (i !! 1), offset ]
-    | head i == "swc1" = [ "111001", base, addr (i !! 1), offset ]
+    | head i == "lwc1" = [ "110001", base, addrF (i !! 1), offset ]
+    | head i == "swc1" = [ "111001", base, addrF (i !! 1), offset ]
     | otherwise = undefined
   where
-    (baseRegName, immediateInDigit) = parseRegisterWithOffset (i !! 2)
+    (baseName, immediateInDigit) = parseRegisterWithOffset (i !! 2)
     offset = binaryExp (read immediateInDigit) 16
-    base = addr baseRegName
+    base = if head baseName == '$'
+             then addr baseName
+             else fst $ searchLabelInDataMap baseName dm
 
 -- "3($r3)" -> ("$r3", "3")
 parseRegisterWithOffset :: String -> (String, String)
@@ -418,18 +430,18 @@ parseRegisterWithOffset str = (regName, offset)
 toDec :: String -> Int
 toDec = foldl' (\acc x -> acc * 2 + digitToInt x) 0
 
-expandLI :: [String] -> Int -> Environment -> [Instruction]
-expandLI i pc e = instructionLUI ++ instructionORI
+expandLI :: [String] -> Int -> Environment -> DataMap -> [Instruction]
+expandLI i pc e dm = instructionLUI ++ instructionORI
   where
     immediate = binaryExp (read (i !! 2)) 32
     upper = show . toDec $ take 16 immediate
     lower = show . toDec $ drop 16 immediate
     lui = [ "lui" , i !! 1 , upper ]
     ori = [ "ori" , i !! 1 , i !! 1 , lower ]
-    instructionLUI = parseInstruction lui pc e
-    instructionORI = parseInstruction ori pc e
+    instructionLUI = parseInstruction lui pc e dm
+    instructionORI = parseInstruction ori pc e dm
 
-expandMOVE :: [String] -> Int -> Environment -> [Instruction]
+expandMOVE :: [String] -> Int -> Environment -> DataMap -> [Instruction]
 expandMOVE i = parseInstruction ["or", i !! 1, i !! 2, "r0"]
 
 removeCommaIfAny :: String -> String
@@ -446,8 +458,9 @@ addrCC :: String -> String
 addrCC cc = binaryExp (read cc) 3
 
 addrF :: String -> String
-addrF mnemonic = unwrapper $ M.lookup mnemonic registerToAddressFloat
+addrF mnemonic = unwrapper $ M.lookup regName registerToAddressFloat
   where
+    regName = removeCommaIfAny mnemonic
     unwrapper (Just str) = str
     unwrapper Nothing = "00000"
 
@@ -466,7 +479,7 @@ isLabel i = drop (length (head i) - 1) (head i) == ":"
 extendEnv :: Environment -> String -> Int -> Environment
 extendEnv e label i = M.insert (take (length label - 1) label) i e
 
--- ".label" e -> "0101010110...01"
+-- "label" e -> "0101010110...01"
 labelToAddr :: String -> Int -> Environment -> Int -> String
 labelToAddr label currentLine e len = addrDiff
   where
@@ -506,8 +519,17 @@ extractData xs@(i:is)
     ys = takeWhile p1 $ drop 1 xs
     p2 = \asm -> head asm /= ".data"
 
-storeData :: [[String]] -> DataMap
-storeData = undefined
+constructDataMap :: [[String]] -> Int -> [(String, (String, String))]
+constructDataMap [] hp = []
+constructDataMap [x] hp = undefined
+constructDataMap (l:v:xs) hp = (label, (binaryExp hp 5, binaryExp value 32)) : constructDataMap xs (hp + 1)
+  where
+    label = takeWhile (\c -> c /= ':') $ head l
+    value = read (v !! 1) :: Int  -- value = [".word", "11001100"] !! 1 = "11001100"
+
+parseDataMap :: [(String, (String, String))] -> [[String]]
+parseDataMap [] = []
+parseDataMap ((_, (addr, value)):xs) = [ addr ] : [ value ] : parseDataMap xs
 
 -- Instructions without ".data" section
 extractText :: [[String]] -> [[[String]]]
