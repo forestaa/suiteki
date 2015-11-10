@@ -1,3 +1,4 @@
+	.text
 fib.10:
 	li	$v0, 1
 	sub	$at, $a0, $v0
