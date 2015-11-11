@@ -38,11 +38,13 @@ args = Args
     <*> strOption
         ( long "output"
        <> short 'o'
+       <> value "a.out"
        <> help "The location of the output file" )
     <*> strOption
         ( long "lib"
        <> short 'l'
        <> metavar "LIBRARY"
+       <> value "./lib/libmincaml.S"
        <> help "The location of libmincaml.S" )
 
 main :: IO()
