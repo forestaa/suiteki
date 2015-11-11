@@ -59,21 +59,26 @@ writeBinary :: Args -> IO ()
 writeBinary args = do
     ss <- readFile (assembly args)
     let is = map words $ lines ss -- instructions
-    let labels = prepareLabels (head $ extractText is) 0
+
+    let dataSection = concat $ extractData is
+    let dataMap = constructDataMap dataSection (2 ^ 16)
+    let dataList = parseDataMap dataMap
+
+    let textSection = expandLabelInLWC1 (concat $ extractText is) dataMap
+    let labels = prepareLabels textSection 0
+
+    putStrLn $ show labels
 
     lib <- readFile (library args)
     let ys = map words $ lines lib
 
-    let is' = enrichInstructions (externalFunctions is labels) is ys
+    let textClosure = enrichInstructions (externalFunctions textSection labels) is ys
 
-    let dataMap = constructDataMap (concat $ extractData is') (2 ^ 16)
-    let dataList = parseDataMap dataMap
+    {- let is'' = expandLabelInLWC1 (head $ extractText textClosure) dataMap -}
 
-    let is'' = expandLabelInLWC1 (head $ extractText is') dataMap
-
-    let labels' = prepareLabels is'' 0
-    let parsed = parse is'' 0 labels' dataMap
-    let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labels')) 32]
+    let labelClosure = prepareLabels textClosure 0
+    let parsed = parse textClosure 0 labelClosure dataMap
+    let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labelClosure)) 32]
 
     let machineCode = dataList ++ [[magicNumber]] ++ [ep] ++ parsed
 
