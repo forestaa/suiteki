@@ -28,6 +28,8 @@ type DataMap = [(String, (String, String))]
 data Args = Args { assembly :: String
                  , output :: String
                  , library :: String
+                 , debug :: Bool
+                 , noExternals :: Bool
                  } deriving Show
 
 args :: Parser Args
@@ -46,40 +48,87 @@ args = Args
        <> metavar "LIBRARY"
        <> value "./lib/libmincaml.S"
        <> help "The location of libmincaml.S" )
+    <*> switch
+        ( long "debug"
+       <> short 'd'
+       <> help "Enable debug mode" )
+    <*> switch
+        ( long "no-externals"
+       <> help "Do not use library (for debug)" )
 
 main :: IO()
-main = execParser opts >>= writeBinary
+main = execParser opts >>= switcher
   where
     opts = info (helper <*> args)
       ( fullDesc
      <> progDesc "Assemble the given file"
      <> header "suiteki - The super-cool assembler for out 1st architecture" )
 
+switcher :: Args -> IO ()
+switcher args = do
+    if (noExternals args)
+      then writeBinaryWithoutLibrary args
+      else writeBinary args
+
+writeBinaryWithoutLibrary :: Args -> IO ()
+writeBinaryWithoutLibrary args = do
+    ss <- readFile (assembly args)
+    let is = map words $ lines ss -- instructions
+
+    let dataSection = concat $ extractData is
+
+    let dataMap = constructDataMap dataSection (2 ^ 16)
+    let dataList = parseDataMap dataMap
+
+    let inputTextSection = expandLabelInLWC1 (concat $ extractText is) dataMap
+    let textSection = inputTextSection ++ [["magic"]]
+    let labels = prepareLabels textSection 0
+
+    let parsed = if (debug args)
+                   then parseWithTrace textSection 0 labels dataMap
+                   else parse textSection 0 labels dataMap
+    let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labels)) 32]
+
+    let machineCode = dataList ++ [[magicNumber]] ++ [ep] ++ parsed
+
+    let parsed = constructByteString . toString $ machineCode
+    B.writeFile (output args) parsed
+    setFileMode (output args) permission
+  where
+    magicNumber = "01110000000000000000000000111111"
+    permission = ownerModes
+                 `unionFileModes` groupReadMode
+                 `unionFileModes` groupExecuteMode
+                 `unionFileModes` otherReadMode
+                 `unionFileModes` otherExecuteMode
+
 writeBinary :: Args -> IO ()
 writeBinary args = do
     ss <- readFile (assembly args)
     let is = map words $ lines ss -- instructions
 
-    let dataSection = concat $ extractData is
-    let dataMap = constructDataMap dataSection (2 ^ 16)
-    let dataList = parseDataMap dataMap
-
-    let textSection = expandLabelInLWC1 (concat $ extractText is) dataMap
-    let labels = prepareLabels textSection 0
-
     lib <- readFile (library args)
     let ys = map words $ lines lib
 
-    let textClosure = enrichInstructions (externalFunctions textSection labels) textSection ys
+    let dataSection = concat $ extractData is
+    let libDataSection = concat $ extractData ys
 
-    let labelClosure = prepareLabels textClosure 0
-    let parsed = parse textClosure 0 labelClosure dataMap
-    let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labelClosure)) 32]
+    let dataMap = constructDataMap (dataSection ++ libDataSection) (2 ^ 16)
+    let dataList = parseDataMap dataMap
+
+    let libTextSection = expandLabelInLWC1 (concat $ extractText ys) dataMap
+    let inputTextSection = expandLabelInLWC1 (concat $ extractText is) dataMap
+    let textSection = inputTextSection ++ libTextSection ++ [["magic"]]
+    let labels = prepareLabels textSection 0
+
+    putStrLn $ show labels
+
+    let parsed = if (debug args)
+                   then parseWithTrace textSection 0 labels dataMap
+                   else parse textSection 0 labels dataMap
+    let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labels)) 32]
 
     let machineCode = dataList ++ [[magicNumber]] ++ [ep] ++ parsed
-
-    {- let info = debugParse textClosure 0 labelClosure dataMap -}
-    {- mapM_ (putStrLn . show) info -}
 
     let parsed = constructByteString . toString $ machineCode
     B.writeFile (output args) parsed
@@ -95,6 +144,7 @@ writeBinary args = do
 expandLabelInLWC1 :: [[String]] -> DataMap -> [[String]]
 expandLabelInLWC1 [] dm = []
 expandLabelInLWC1 (i:is) dm
+    | null i = expandLabelInLWC1 is dm
     | head i == "lwc1" && head baseName /= '$' = [ [ "li", "$ra", base ]
                                                  , [ "lwc1", i !! 1, "0($ra)" ]
                                                  ] ++ expandLabelInLWC1 is dm
@@ -133,7 +183,6 @@ instructionToBinaryString = foldl (\acc x -> acc ++ x) ""
 prepareLabels :: [[String]] -> Int -> Environment
 prepareLabels [] _ = M.empty
 prepareLabels (l:ls) pc
-    {- | trace (show pc ++ ": " ++ show l) False = undefined -}
     | null l               = prepareLabels ls pc
     | head (head l) == '#' = prepareLabels ls pc
     | isLabel l            = extendEnv (prepareLabels ls pc) (head l) pc
@@ -154,6 +203,7 @@ allLabels (l:ls)
     | head l == "bgtz" = (l !! 2) : allLabels ls
     | head l == "bltz" = (l !! 2) : allLabels ls
     | head l == "jal" = (l !! 1) : allLabels ls
+    | head l == "j" = (l !! 1) : allLabels ls
     | otherwise = allLabels ls
 
 -- collect funtions which is not defined in the given assembly.
@@ -169,6 +219,16 @@ parse (l:ls) pc e dm
     | isLabel l            = parse ls pc e dm
     | head l == "li"       = parseInstruction l pc e dm ++ parse ls (pc + 2) e dm
     | otherwise            = parseInstruction l pc e dm ++ parse ls (pc + 1) e dm
+
+parseWithTrace :: [[String]] -> Int -> Environment -> DataMap -> [Instruction]
+parseWithTrace [] _ _ _ = []
+parseWithTrace (l:ls) pc e dm
+    | trace (show pc ++ " " ++ show l) False = undefined
+    | null l               = parseWithTrace ls pc e dm
+    | head (head l) == '#' = parseWithTrace ls pc e dm
+    | isLabel l            = parseWithTrace ls pc e dm
+    | head l == "li"       = parseInstruction l pc e dm ++ parseWithTrace ls (pc + 2) e dm
+    | otherwise            = parseInstruction l pc e dm ++ parseWithTrace ls (pc + 1) e dm
 
 parseInstruction :: [String] -> Int -> Environment -> DataMap -> [Instruction]
 parseInstruction i pc e dm
@@ -345,6 +405,10 @@ parseInstruction i pc e dm
     | head i == "sw"      = parseIndexedInstruction i e dm
     | head i == "lwc1"    = parseIndexedInstruction i e dm
     | head i == "swc1"    = parseIndexedInstruction i e dm
+    | head i == "j"       = [ [ "000010"
+                              , labelToAddr (i !! 1) pc e 26
+                              ]
+                            ]
     | head i == "jal"     = [ [ "000011"
                               , labelToAddr (i !! 1) pc e 26
                               ]
@@ -394,7 +458,7 @@ parseInstruction i pc e dm
                               , addrCC (i !! 1)
                               , "0"
                               , "1"
-                              , binaryExp (read (i !! 2)) 16
+                              , labelToAddr (i !! 2) pc e 16
                               ]
                             ]
     | head i == "mfc1"    = [ [ "010001"
@@ -478,7 +542,7 @@ addr mnemonic = unwrapper $ M.lookup regName registerToAddress
     unwrapper Nothing = "00000"
 
 addrCC :: String -> String
-addrCC cc = binaryExp (read cc) 3
+addrCC cc = binaryExp (read (removeCommaIfAny cc)) 3
 
 addrF :: String -> String
 addrF mnemonic = unwrapper $ M.lookup regName registerToAddressFloat
@@ -534,6 +598,7 @@ extractCodeBlock label is = takeWhile p1 $ dropWhile p2 is
 extractData :: [[String]] -> [[[String]]]
 extractData [] = []
 extractData xs@(i:is)
+    | null i            = extractData is
     | head i == ".data" = ys : (extractData $ drop (length ys) xs)
     | head i == ".text" = extractData $ dropWhile p2 xs
     | otherwise         = extractData is
@@ -558,6 +623,7 @@ parseDataMap ((_, (addr, value)):xs) = [ addr ] : [ value ] : parseDataMap xs
 extractText :: [[String]] -> [[[String]]]
 extractText [] = []
 extractText xs@(i:is)
+    | null i            = extractText is
     | head i == ".text" = ys : (extractText $ drop (length ys + 1) xs)
     | head i == ".data" = extractText $ dropWhile p2 xs
     | otherwise         = extractText is
