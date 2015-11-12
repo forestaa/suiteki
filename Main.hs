@@ -65,22 +65,25 @@ writeBinary args = do
     let dataList = parseDataMap dataMap
 
     let textSection = expandLabelInLWC1 (concat $ extractText is) dataMap
+    putStrLn $ show textSection
     let labels = prepareLabels textSection 0
-
-    putStrLn $ show labels
 
     lib <- readFile (library args)
     let ys = map words $ lines lib
 
-    let textClosure = enrichInstructions (externalFunctions textSection labels) is ys
+    let textClosure = enrichInstructions (externalFunctions textSection labels) textSection ys
 
     {- let is'' = expandLabelInLWC1 (head $ extractText textClosure) dataMap -}
 
     let labelClosure = prepareLabels textClosure 0
+    putStrLn $ show labelClosure
     let parsed = parse textClosure 0 labelClosure dataMap
     let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labelClosure)) 32]
 
     let machineCode = dataList ++ [[magicNumber]] ++ [ep] ++ parsed
+
+    {- let info = debugParse textClosure 0 labelClosure dataMap -}
+    {- mapM_ (putStrLn . show) info -}
 
     let parsed = constructByteString . toString $ machineCode
     B.writeFile (output args) parsed
@@ -134,6 +137,7 @@ instructionToBinaryString = foldl (\acc x -> acc ++ x) ""
 prepareLabels :: [[String]] -> Int -> Environment
 prepareLabels [] _ = M.empty
 prepareLabels (l:ls) pc
+    | trace (show pc ++ ": " ++ show l) False = undefined
     | null l               = prepareLabels ls pc
     | head (head l) == '#' = prepareLabels ls pc
     | isLabel l            = extendEnv (prepareLabels ls pc) (head l) pc
@@ -558,12 +562,13 @@ parseDataMap ((_, (addr, value)):xs) = [ addr ] : [ value ] : parseDataMap xs
 extractText :: [[String]] -> [[[String]]]
 extractText [] = []
 extractText xs@(i:is)
-    | head i == ".text" = ys : (extractText $ drop (length ys) xs)
+    | trace ("i: " ++ show i) False = undefined
+    | head i == ".text" = ys : (extractText $ drop (length ys + 1) xs)
     | head i == ".data" = extractText $ dropWhile p2 xs
     | otherwise         = extractText is
   where
     p1 = \asm -> head asm /= ".data" && head asm /= ".text"
-    ys = takeWhile p1 $ drop 1 xs
+    ys = takeWhile p1 is
     p2 = \asm -> head asm /= ".text"
 
 registerToAddress :: M.Map String String
@@ -670,3 +675,18 @@ registerToAddressFloat = M.fromList [ ("$f0",  "00000")
                                     , ("$f30", "11110")
                                     , ("$f31", "11111")
                                     ]
+
+debugParse :: [[String]] -> Int -> Environment -> DataMap -> [Instruction]
+debugParse [] _ _ _ = []
+debugParse (l:ls) pc e dm
+    | null l               = debugParse ls pc e dm
+    | head (head l) == '#' = debugParse ls pc e dm
+    | isLabel l            = debugParse ls pc e dm
+    | head l == "li"       = debugInfo l pc e dm ++ debugParse ls (pc + 2) e dm
+    | otherwise            = debugInfo l pc e dm ++ debugParse ls (pc + 1) e dm
+
+debugInfo :: [String] -> Int -> Environment -> DataMap -> [[String]]
+debugInfo i pc e dm
+    | head i == "li"      = [["lui"], ["ori"]]
+    | head i == "move"    = [["or(from move)"]]
+    | otherwise           = [i]
