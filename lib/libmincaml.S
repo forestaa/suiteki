@@ -33,7 +33,7 @@ min_caml_print_int_final:
 	lw	$ra, 0($sp)
 	jr	$ra
 min_caml_print_byte:
-	li	$v0, 3
+	li	$v0, 11
 	sw	$ra, 0($sp)
 	addi    $sp, $sp, 4
 	syscall
@@ -232,17 +232,14 @@ min_caml_float_of_int:
 	jr	$ra
 min_caml_cos:
 	lwc1	$f4, 0(x1)
-	c.olt.s	$f12, $f4
+	c.olt.s	0, $f12, $f4
 	bc1t	0, cos_branch1
-
 	lwc1	$f4, 0(x2)
-	c.olt.s	$f12, $f4
+	c.olt.s	0, $f12, $f4
 	bc1t	0, cos_branch2
-
 	lwc1	$f4, 0(x3)
-	c.olt.s	$f12, $f4
+	c.olt.s	0, $f12, $f4
 	bc1t	0, cos_branch3
-
         li	$f0, 1
 	sub.s	$f12, $f12, $f4
 	j	calc
@@ -261,17 +258,14 @@ cos_branch1:
 	j	calc
 min_caml_sin:
 	lwc1	$f4, 0(x1)
-	c.olt.s	$f12, $f4
+	c.olt.s	0, $f12, $f4
 	bc1t	0, sin_branch1
-
 	lwc1	$f4, 0(x2)
-	c.olt.s	$f12, $f4
+	c.olt.s	0, $f12, $f4
 	bc1t	0, sin_branch2
-
 	lwc1	$f4, 0(x3)
-	c.olt.s	$f12, $f4
+	c.olt.s	0, $f12, $f4
 	bc1t	0, sin_branch3
-
 	lwc1	$f4, 0(x4)
         li	$f0, -1
 	sub.s	$f12, $f4, $f12
