@@ -1,4 +1,4 @@
-## build
+## how to build & examples
 ```
 $ git clone http://github.com/rikatze/suiteki.git
 
