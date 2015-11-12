@@ -54,7 +54,7 @@ args = Args
        <> help "Enable debug mode" )
     <*> switch
         ( long "no-externals"
-       <> help "Do not use library (for debug)" )
+       <> help "Do not use library (for debugging)" )
 
 main :: IO()
 main = execParser opts >>= switcher
@@ -120,8 +120,6 @@ writeBinary args = do
     let inputTextSection = expandLabelInLWC1 (concat $ extractText is) dataMap
     let textSection = inputTextSection ++ libTextSection ++ [["magic"]]
     let labels = prepareLabels textSection 0
-
-    putStrLn $ show labels
 
     let parsed = if (debug args)
                    then parseWithTrace textSection 0 labels dataMap
