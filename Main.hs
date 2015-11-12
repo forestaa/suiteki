@@ -65,7 +65,6 @@ writeBinary args = do
     let dataList = parseDataMap dataMap
 
     let textSection = expandLabelInLWC1 (concat $ extractText is) dataMap
-    putStrLn $ show textSection
     let labels = prepareLabels textSection 0
 
     lib <- readFile (library args)
@@ -73,10 +72,7 @@ writeBinary args = do
 
     let textClosure = enrichInstructions (externalFunctions textSection labels) textSection ys
 
-    {- let is'' = expandLabelInLWC1 (head $ extractText textClosure) dataMap -}
-
     let labelClosure = prepareLabels textClosure 0
-    putStrLn $ show labelClosure
     let parsed = parse textClosure 0 labelClosure dataMap
     let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labelClosure)) 32]
 
@@ -137,7 +133,7 @@ instructionToBinaryString = foldl (\acc x -> acc ++ x) ""
 prepareLabels :: [[String]] -> Int -> Environment
 prepareLabels [] _ = M.empty
 prepareLabels (l:ls) pc
-    | trace (show pc ++ ": " ++ show l) False = undefined
+    {- | trace (show pc ++ ": " ++ show l) False = undefined -}
     | null l               = prepareLabels ls pc
     | head (head l) == '#' = prepareLabels ls pc
     | isLabel l            = extendEnv (prepareLabels ls pc) (head l) pc
@@ -562,7 +558,6 @@ parseDataMap ((_, (addr, value)):xs) = [ addr ] : [ value ] : parseDataMap xs
 extractText :: [[String]] -> [[[String]]]
 extractText [] = []
 extractText xs@(i:is)
-    | trace ("i: " ++ show i) False = undefined
     | head i == ".text" = ys : (extractText $ drop (length ys + 1) xs)
     | head i == ".data" = extractText $ dropWhile p2 xs
     | otherwise         = extractText is
