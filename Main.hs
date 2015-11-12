@@ -333,6 +333,22 @@ parseInstruction i pc e dm
                               , "000011"
                               ]
                             ]
+    | head i == "abs.s"   = [ [ "010001"
+                              , "10000"
+                              , "00000"
+                              , addr (i !! 2)
+                              , addr (i !! 1)
+                              , "000101"
+                              ]
+                            ]
+    | head i == "sqrt.s"   = [ [ "010001"
+                               , "10000"
+                               , "00000"
+                               , addr (i !! 2)
+                               , addr (i !! 1)
+                               , "000100"
+                               ]
+                             ]
     | head i == "mov.s"   = [ [ "010001"
                               , "10000"
                               , "00000"
@@ -475,6 +491,22 @@ parseInstruction i pc e dm
                               , "0000000000"
                               ]
                             ]
+    | head i == "cvt.s.w" = [ [ "010001"
+                              , "10000"
+                              , "00000"
+                              , addrF (i !! 2)
+                              , addrF (i !! 1)
+                              , "100000"
+                              ]
+                            ]
+    | head i == "trunc.w.s" = [ [ "010001"
+                                , "10000"
+                                , "00000"
+                                , addrF (i !! 2)
+                                , addrF (i !! 1)
+                                , "001101"
+                                ]
+                              ]
     | head i == "li"      = expandLI i pc e dm
     | head i == "move"    = expandMOVE i pc e dm
     | head i == "syscall" = [ [ "000000"
@@ -483,6 +515,7 @@ parseInstruction i pc e dm
                               ]
                             ]
     | head i == "magic"   = [ [ "11111111111111111111111111111111" ] ]
+    | trace (show i) False = undefined
     | otherwise           = []
 
 searchLabelInDataMap :: String -> DataMap -> (String, String)
