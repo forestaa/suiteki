@@ -12,10 +12,6 @@ import Options.Applicative
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Map as M
 
-type Asm = [String]
-
-type AsmProg = [Asm]
-
 type Instruction = [String]
 
 type Environment = M.Map String Int
