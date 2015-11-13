@@ -51,48 +51,12 @@ args = Args
        <> help "Do not use library (for debugging)" )
 
 main :: IO()
-main = execParser opts >>= switcher
+main = execParser opts >>= writeBinary
   where
     opts = info (helper <*> args)
       ( fullDesc
      <> progDesc "Assemble the given file"
      <> header "suiteki - The super-cool assembler for out 1st architecture" )
-
-switcher :: Args -> IO ()
-switcher a = if noExternals a
-               then writeBinaryWithoutLibrary a
-               else writeBinary a
-
-writeBinaryWithoutLibrary :: Args -> IO ()
-writeBinaryWithoutLibrary a = do
-    ss <- readFile (assembly a)
-    let is = map words $ lines ss -- instructions
-
-    let dataSection = concat $ extractData is
-
-    let dataMap = constructDataMap dataSection 65536
-    let dataList = parseDataMap dataMap
-
-    let inputTextSection = expandLabelInLWC1 (concat $ extractText is) dataMap
-    let textSection = inputTextSection ++ [["magic"]]
-    let labels = prepareLabels textSection 0
-
-    let parsed = if debug a
-                   then parseWithTrace textSection 0 labels dataMap
-                   else parse textSection 0 labels dataMap
-    let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labels)) 32]
-
-    let machineCode = dataList ++ [[magicNumber]] ++ [ep] ++ parsed
-
-    B.writeFile (output a) (constructByteString . toString $ machineCode)
-    setFileMode (output a) permission
-  where
-    magicNumber = "01110000000000000000000000111111"
-    permission = ownerModes
-                 `unionFileModes` groupReadMode
-                 `unionFileModes` groupExecuteMode
-                 `unionFileModes` otherReadMode
-                 `unionFileModes` otherExecuteMode
 
 writeBinary :: Args -> IO ()
 writeBinary a = do
@@ -105,12 +69,16 @@ writeBinary a = do
     let dataSection = concat $ extractData is
     let libDataSection = concat $ extractData ys
 
-    let dataMap = constructDataMap (dataSection ++ libDataSection) 65536
+    let dataMap = if noExternals a
+                    then constructDataMap dataSection 65536
+                    else constructDataMap (dataSection ++ libDataSection) 65536
     let dataList = parseDataMap dataMap
 
     let libTextSection = expandLabelInLWC1 (concat $ extractText ys) dataMap
     let inputTextSection = expandLabelInLWC1 (concat $ extractText is) dataMap
-    let textSection = inputTextSection ++ libTextSection ++ [["magic"]]
+    let textSection = if noExternals a
+                        then inputTextSection ++ [["magic"]]
+                        else inputTextSection ++ libTextSection ++ [["magic"]]
     let labels = prepareLabels textSection 0
 
     let parsed = if debug a
