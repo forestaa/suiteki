@@ -420,11 +420,11 @@ parseInstruction i pc e dm
     | head i == "lwc1"    = parseIndexedInstruction i e dm
     | head i == "swc1"    = parseIndexedInstruction i e dm
     | head i == "j"       = [ [ "000010"
-                              , labelToAddr (i !! 1) pc e 26
+                              , labelToAbsAddr (i !! 1) pc e 26
                               ]
                             ]
     | head i == "jal"     = [ [ "000011"
-                              , labelToAddr (i !! 1) pc e 26
+                              , labelToAbsAddr (i !! 1) pc e 26
                               ]
                             ]
     | head i == "jr"      = [ [ "00000"
@@ -603,6 +603,12 @@ labelToAddr label currentLine e len = addrDiff
   where
     lineNum = fromMaybe undefined (M.lookup label e)
     addrDiff = binaryExp (lineNum - currentLine) len
+
+labelToAbsAddr :: String -> Int -> Environment -> Int -> String
+labelToAbsAddr label currentLine e len = addr
+  where
+    lineNum = fromMaybe undefined (M.lookup label e)
+    addr = binaryExp lineNum len
 
 -- Extract the code block of given |label|.
 -- e.g. if |instructions| is as follows:
