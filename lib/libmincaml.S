@@ -75,7 +75,13 @@ min_caml_prerr_byte:
 	jr	$ra
 min_caml_prerr_float:
 min_caml_read_char:
-	# unimplemented
+	li	$v0, 12
+	sw	$ra, 0($sp)
+	addi    $sp, $sp, 4
+	syscall
+	addi    $sp, $sp, -4
+	sw	$ra, 0($sp)
+	jr	$ra
 min_caml_read_int:
 	li	$t0, 0 # 文字列のカウンタ
 	move	$t6, $hp # heap pointerの初期位置を覚えておく
