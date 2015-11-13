@@ -108,8 +108,10 @@ min_caml_read_int_calc:
 	addi	$t2, $t2, -4
 min_caml_read_int_for_loop:
 	beq	$t2, $t6, min_caml_read_int_finalize
+	# 1文字読む
 	lw	$t3, 0($t2)
-	addi	$t3, $t3, -48
+	addi	$t3, $t3, -48 # Char -> Int
+	# 「$t3 * (ループごとに10倍される値)」の計算
 	sw	$ra, 0($sp)
 	sw	$t0, 4($sp)
 	sw	$t1, 8($sp)
@@ -122,12 +124,14 @@ min_caml_read_int_for_loop:
 	jal	mul
 	addi	$sp, sp, -28
 	sw	$v0, 24($sp)
+	# $t1を10倍する
 	lw	$a0, 8($sp) # t1をロードしてa0に代入
 	li	$a1, 10
 	addi	$sp, $sp, 28
 	jal	mul
 	addi	$sp, $sp, -28
 	move	$t1, $v0 # t1を10倍された値で更新
+	# 値を$spから再取得
 	lw	$ra, 0($sp)
 	lw	$t0, 4($sp)
 	lw	$t2, 12($sp)
