@@ -74,29 +74,41 @@ min_caml_prerr_byte:
 	sw	$ra, 0($sp)
 	jr	$ra
 min_caml_prerr_float:
+min_caml_read_char:
+	# unimplemented
 min_caml_read_int:
-	li	$t0, 0
-min_caml_read_int_while_loop:
-	add	$t1, $a0, $t0
-	lw	$t1, 0($t1)
-	beq	$t1, $r0, min_caml_read_int_calc
+	li	$t0, 0 # 文字列のカウンタ
+	move	$t6, $hp # heap pointerの初期位置を覚えておく
+min_caml_read_int_read_input:
+	sw	$t0, 0($sp)
+	addi	$sp, $sp, 4
+	jal	min_caml_read_char
+	addi	$sp, $sp, -4
+	lw	$t0, 0($sp)
+	addi	$t2, $v0, -32  # space?
+	beq	$t2, $r0, min_caml_read_int_start_reading
+	sw	$v0, 0($hp)
+	addi	$hp, $hp, 4
 	addi	$t0, $t0, 1
-	j	min_caml_read_int_while_loop
+	j	min_caml_read_int_read_input
 min_caml_read_int_calc:
-	li	$t1, 1
+	# この時点で$t0には文字列の長さが入っている。
+	# また$t6+4*iにi文字目の文字が入っている。
+	move	$t2, $hp # 文字列を後ろからたどるためのポインタ
+	addi	$t6, $t6, -4 # ループ終了の判定に使う。
+	li	$t1, 1 # ループごとに10倍される値。
 	li	$v0, 0
+	# 文字を後ろから読んでいく。
+	addi	$t2, $t2, -4
 min_caml_read_int_for_loop:
-	addi	$t2, $t0, -1
-	bltz	$t2, min_caml_read_int_finalize
-	add	$t8, $a0, $t2
-	lw	$t3, 0($t8)
+	beq	$t2, $t6, min_caml_read_int_finalize
+	lw	$t3, 0($t2)
 	addi	$t3, $t3, -48
 	sw	$ra, 0($sp)
 	sw	$t0, 4($sp)
 	sw	$t1, 8($sp)
 	sw	$t2, 12($sp)
 	sw	$t3, 16($sp)
-	sw	$t8, 20($sp)
 	sw	$v0, 24($sp)
 	move	$a0, $t3
 	move	$a1, $t1
@@ -104,19 +116,18 @@ min_caml_read_int_for_loop:
 	jal	mul
 	addi	$sp, sp, -28
 	sw	$v0, 24($sp)
-	lw	$a0, 8($sp)
+	lw	$a0, 8($sp) # t1をロードしてa0に代入
 	li	$a1, 10
-	addi	$sp, sp, 28
+	addi	$sp, $sp, 28
 	jal	mul
-	addi	$sp, sp, -28
-	move	$t1, $v0
+	addi	$sp, $sp, -28
+	move	$t1, $v0 # t1を10倍された値で更新
 	lw	$ra, 0($sp)
 	lw	$t0, 4($sp)
 	lw	$t2, 12($sp)
 	lw	$t3, 16($sp)
-	lw	$t8, 20($sp)
 	lw	$v0, 24($sp)
-	addi	$t2, $t2, -1
+	addi	$t2, $t2, -4
 	j	min_caml_read_int_for_loop
 min_caml_read_int_finalize:
 	jr	$ra
