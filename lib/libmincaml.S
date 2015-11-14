@@ -2,84 +2,84 @@
 min_caml_print_newline:
 	li	$a0, 10
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, 4
-	jal	min_caml_print_byte
 	addi    $sp, $sp, -4
+	jal	min_caml_print_byte
+	addi    $sp, $sp, 4
 	sw	$ra, 0($sp)
 	jr	$ra
 min_caml_print_int:
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, 4
-	jal	div10
 	addi    $sp, $sp, -4
+	jal	div10
+	addi    $sp, $sp, 4
 	lw	$ra, 0($sp)
 	bgtz	$v0, min_caml_print_int_rec
 	j	min_caml_print_int_final
 min_caml_print_int_rec:
 	sw	$ra, 0($sp)
-	sw	$v1, 4($sp)
+	sw	$v1, -4($sp)
 	move	$a0, $v0
-	addi    $sp, $sp, 8
-	jal	min_caml_print_int
 	addi    $sp, $sp, -8
+	jal	min_caml_print_int
+	addi    $sp, $sp, 8
 	lw	$ra, 0($sp)
-	lw	$v1, 4($sp)
+	lw	$v1, -4($sp)
 min_caml_print_int_final:
 	addi	$a0, $v1, 48
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, 4
-	jal	min_caml_print_byte
 	addi    $sp, $sp, -4
+	jal	min_caml_print_byte
+	addi    $sp, $sp, 4
 	lw	$ra, 0($sp)
 	jr	$ra
 min_caml_print_byte:
 	li	$v0, 11
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, 4
-	syscall
 	addi    $sp, $sp, -4
+	syscall
+	addi    $sp, $sp, 4
 	sw	$ra, 0($sp)
 	jr	$ra
 min_caml_prerr_int:
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, 4
-	jal	div10
 	addi    $sp, $sp, -4
+	jal	div10
+	addi    $sp, $sp, 4
 	lw	$ra, 0($sp)
 	bgtz	$v0, min_caml_prerr_int_rec
 	j	min_caml_prerr_int_final
 min_caml_prerr_int_rec:
 	sw	$ra, 0($sp)
-	sw	$v1, 4($sp)
+	sw	$v1, -4($sp)
 	move	$a0, $v0
-	addi    $sp, $sp, 8
-	jal	min_caml_prerr_int
 	addi    $sp, $sp, -8
+	jal	min_caml_prerr_int
+	addi    $sp, $sp, 8
 	lw	$ra, 0($sp)
-	lw	$v1, 4($sp)
+	lw	$v1, -4($sp)
 min_caml_prerr_int_final:
 	addi	$a0, $v1, 48
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, 4
-	jal	min_caml_prerr_byte
 	addi    $sp, $sp, -4
+	jal	min_caml_prerr_byte
+	addi    $sp, $sp, 4
 	lw	$ra, 0($sp)
 	jr	$ra
 min_caml_prerr_byte:
 	li	$v0, 103
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, 4
-	syscall
 	addi    $sp, $sp, -4
+	syscall
+	addi    $sp, $sp, 4
 	sw	$ra, 0($sp)
 	jr	$ra
 min_caml_prerr_float:
 min_caml_read_char:
 	li	$v0, 12
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, 4
-	syscall
 	addi    $sp, $sp, -4
+	syscall
+	addi    $sp, $sp, 4
 	sw	$ra, 0($sp)
 	jr	$ra
 min_caml_read_int:
@@ -87,9 +87,9 @@ min_caml_read_int:
 	move	$t6, $hp # heap pointerの初期位置を覚えておく
 min_caml_read_int_read_input:
 	sw	$t0, 0($sp)
-	addi	$sp, $sp, 4
-	jal	min_caml_read_char
 	addi	$sp, $sp, -4
+	jal	min_caml_read_char
+	addi	$sp, $sp, 4
 	lw	$t0, 0($sp)
 	addi	$t2, $v0, -32  # space?
 	beq	$t2, $r0, min_caml_read_int_calc
@@ -113,30 +113,30 @@ min_caml_read_int_for_loop:
 	addi	$t3, $t3, -48 # Char -> Int
 	# 「$t3 * (ループごとに10倍される値)」の計算
 	sw	$ra, 0($sp)
-	sw	$t0, 4($sp)
-	sw	$t1, 8($sp)
-	sw	$t2, 12($sp)
-	sw	$t3, 16($sp)
-	sw	$v0, 24($sp)
+	sw	$t0, -4($sp)
+	sw	$t1, -8($sp)
+	sw	$t2, -12($sp)
+	sw	$t3, -16($sp)
+	sw	$v0, -24($sp)
 	move	$a0, $t3
 	move	$a1, $t1
-	addi	$sp, sp, 28
-	jal	mul
-	addi	$sp, sp, -28
-	sw	$v0, 24($sp)
-	# $t1を10倍する
-	lw	$a0, 8($sp) # t1をロードしてa0に代入
-	li	$a1, 10
-	addi	$sp, $sp, 28
-	jal	mul
 	addi	$sp, $sp, -28
+	jal	mul
+	addi	$sp, -sp, 28
+	sw	$v0, -24($sp)
+	# $t1を10倍する
+	lw	$a0, -8($sp) # t1をロードしてa0に代入
+	li	$a1, 10
+	addi	$sp, $sp, -28
+	jal	mul
+	addi	$sp, $sp, 28
 	move	$t1, $v0 # t1を10倍された値で更新
 	# 値を$spから再取得
 	lw	$ra, 0($sp)
-	lw	$t0, 4($sp)
-	lw	$t2, 12($sp)
-	lw	$t3, 16($sp)
-	lw	$v0, 24($sp)
+	lw	$t0, -4($sp)
+	lw	$t2, -12($sp)
+	lw	$t3, -16($sp)
+	lw	$v0, -24($sp)
 	addi	$t2, $t2, -4
 	j	min_caml_read_int_for_loop
 min_caml_read_int_finalize:
@@ -146,9 +146,9 @@ min_caml_read_float:
 	move	$t6, $hp # heap pointerの初期位置を覚えておく
 min_caml_read_float_read_input:
 	sw	$t0, 0($sp)
-	addi	$sp, $sp, 4
-	jal	min_caml_read_char
 	addi	$sp, $sp, -4
+	jal	min_caml_read_char
+	addi	$sp, $sp, 4
 	lw	$t0, 0($sp)
 	addi	$t2, $v0, -32  # space?
 	beq	$t2, $r0, min_caml_read_float_calc
@@ -180,30 +180,30 @@ min_caml_read_float_question_after:
 	lw	$t3, 0($t5)
 	addi	$t3, $t3, -48
 	sw	$ra, 0($sp)
-	sw	$t0, 4($sp)
-	sw	$t1, 8($sp)
-	sw	$t2, 12($sp)
-	sw	$t3, 16($sp)
-	sw	$t8, 20($sp)
-	sw	$v0, 24($sp)
+	sw	$t0, -4($sp)
+	sw	$t1, -8($sp)
+	sw	$t2, -12($sp)
+	sw	$t3, -16($sp)
+	sw	$t8, -20($sp)
+	sw	$v0, -24($sp)
 	move	$a0, $t3
 	move	$a1, $t1
-	addi	$sp, sp, 28
+	addi	$sp, $sp, -28
 	jal	mul # (str[j] - 48) * dの計算
-	addi	$sp, sp, -28
-	sw	$v0, 24($sp)
-	lw	$a0, 8($sp)
+	addi	$sp, $sp, 28
+	sw	$v0, -24($sp)
+	lw	$a0, -8($sp)
 	li	$a1, 10
-	addi	$sp, sp, 28
+	addi	$sp, $sp, -28
 	jal	mul # d * 10の計算
-	addi	$sp, sp, -28
+	addi	$sp, $sp, 28
 	move	$t1, $v0
 	lw	$ra, 0($sp)
-	lw	$t0, 4($sp)
-	lw	$t2, 12($sp)
-	lw	$t3, 16($sp)
-	lw	$t8, 20($sp)
-	lw	$v0, 24($sp)
+	lw	$t0, -4($sp)
+	lw	$t2, -12($sp)
+	lw	$t3, -16($sp)
+	lw	$t8, -20($sp)
+	lw	$v0, -24($sp)
 	addi	$t7, $t7, -1 # iをデクリメント
 	addi	$t2, $t2, -4 # 1文字前にポインタを移動
 	j	min_caml_read_float_for_loop
@@ -250,9 +250,9 @@ min_caml_sqrt:
 min_caml_floor:
 	li	$v0, 100
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, 4
-	syscall
 	addi    $sp, $sp, -4
+	syscall
+	addi    $sp, $sp, 4
 	sw	$ra, 0($sp)
 	jr	$ra
 min_caml_int_of_float:
@@ -378,14 +378,14 @@ div10_calc_if:
 div10_return:
 	move	$a0, $t2
 	li	$a1, 10
-	sw	$t2, 4($sp)
-	sw	$ra, 8($sp)
-	addi	$sp, $sp, 12
+	sw	$t2, -4($sp)
+	sw	$ra, -8($sp)
+	addi	$sp, $sp, -12
 	jal	mul
 	sub	$v1, $t8, $v0
-	addi	$sp, $sp, -12
-	lw	$ra, 8($sp)
-	lw	$v0, 4($sp)
+	addi	$sp, $sp, 12
+	lw	$ra, -8($sp)
+	lw	$v0, -4($sp)
 	jr	$ra
 	.data
 min_caml_objects:
