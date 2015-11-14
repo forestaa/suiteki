@@ -15,7 +15,7 @@ blez_else.34:
 	li	$v1, 1
 	move	$a1, $v1
 	move	$a0, $v0
-	jr	$ra
+	j	ack.15
 blez_else.35:
 	li	$v0, 1
 	sub	$v0, $a0, $v0
@@ -34,7 +34,7 @@ blez_else.35:
 	lw	$v0, 0($sp)
 	move	$a1, $v1
 	move	$a0, $v0
-	jr	$ra
+	j	ack.15
 _min_caml_start: # main entry point
    # main program start
 	li	$v0, 3
