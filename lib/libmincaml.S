@@ -92,7 +92,7 @@ min_caml_read_int_read_input:
 	addi	$sp, $sp, -4
 	lw	$t0, 0($sp)
 	addi	$t2, $v0, -32  # space?
-	beq	$t2, $r0, min_caml_read_int_start_reading
+	beq	$t2, $r0, min_caml_read_int_calc
 	sw	$v0, 0($hp)
 	addi	$hp, $hp, 4
 	addi	$t0, $t0, 1
@@ -142,30 +142,42 @@ min_caml_read_int_for_loop:
 min_caml_read_int_finalize:
 	jr	$ra
 min_caml_read_float:
-	li	$t0, 0 # t0 = len
-min_caml_read_float_while_loop:
-	add	$t1, $a0, $t0
-	lw	$t1, 0($t1)
-	beq	$t1, $r0, min_caml_read_float_calc # t0 == len of str
+	li	$t0, 0 # 文字列のカウンタ
+	move	$t6, $hp # heap pointerの初期位置を覚えておく
+min_caml_read_float_read_input:
+	sw	$t0, 0($sp)
+	addi	$sp, $sp, 4
+	jal	min_caml_read_char
+	addi	$sp, $sp, -4
+	lw	$t0, 0($sp)
+	addi	$t2, $v0, -32  # space?
+	beq	$t2, $r0, min_caml_read_float_calc
+	sw	$v0, 0($hp)
+	addi	$hp, $hp, 4
 	addi	$t0, $t0, 1
-	j	min_caml_read_float_while_loop
+	j	min_caml_read_float_read_input
 min_caml_read_float_calc:
-	li	$t1, 1 # d
+	move	$t2, $hp # 文字列を後ろからたどるためのポインタ
+	addi	$t6, $t6, -4 # ループ終了の判定に使う。
+	li	$t1, 1 # ループごとに10倍する値
 	li	$v0, 0 # result * 10 (int)
+	# 文字を後ろから読んでいく。
+	addi	$t7, $t0, -1 # ループにおけるi (jの算出に必要)
+	addi	$t2, $t2, -4
 min_caml_read_float_for_loop:
-	addi	$t2, $t0, -1 # t2 = i
-	bltz	$t2, min_caml_read_float_finalize
+	beq	$t2, $t6, min_caml_read_float_finalize
 	addi	$t4, $t0, -2
-	sub	$t4, $t4, $t2
+	sub	$t4, $t4, $t7
 	bgez	$t4, min_caml_read_float_question_true
-	addi	$t5, $t2, -1 # j = i - 1
+	move	$t5, $t7
 	j	min_caml_read_float_question_after
 min_caml_read_float_question_true:
-	move	$t5, $t2
+	addi	$t5, $t7, -4 # j = i - 1
 min_caml_read_float_question_after:
-	bltz	$t5, min_caml_read_float_finalize
-	add	$t8, $a0, $t5
-	lw	$t3, 0($t8)
+	sub	$t4, $t6, $t5 # 元のポインタ - 読もうとするポインタ
+	bltz	$t4, min_caml_read_float_finalize
+	# 後ろから1文字読む
+	lw	$t3, 0($t5)
 	addi	$t3, $t3, -48
 	sw	$ra, 0($sp)
 	sw	$t0, 4($sp)
@@ -177,13 +189,13 @@ min_caml_read_float_question_after:
 	move	$a0, $t3
 	move	$a1, $t1
 	addi	$sp, sp, 28
-	jal	mul
+	jal	mul # (str[j] - 48) * dの計算
 	addi	$sp, sp, -28
 	sw	$v0, 24($sp)
 	lw	$a0, 8($sp)
 	li	$a1, 10
 	addi	$sp, sp, 28
-	jal	mul
+	jal	mul # d * 10の計算
 	addi	$sp, sp, -28
 	move	$t1, $v0
 	lw	$ra, 0($sp)
@@ -192,7 +204,8 @@ min_caml_read_float_question_after:
 	lw	$t3, 16($sp)
 	lw	$t8, 20($sp)
 	lw	$v0, 24($sp)
-	addi	$t2, $t2, -1
+	addi	$t7, $t7, -1 # iをデクリメント
+	addi	$t2, $t2, -4 # 1文字前にポインタを移動
 	j	min_caml_read_float_for_loop
 min_caml_read_float_finalize:
 	mtc1	$v0, $f0
