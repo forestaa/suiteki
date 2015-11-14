@@ -388,6 +388,182 @@ div10_return:
 	lw	$v0, 4($sp)
 	jr	$ra
 	.data
+min_caml_size:
+	.word	128
+	.word	128
+min_caml_dbg:
+	.word	1
+min_caml_screen:
+	.word	0
+	.word	0
+	.word	0
+min_caml_vp:
+	.word	0
+	.word	0
+	.word	0
+min_caml_view:
+	.word	0
+	.word	0
+	.word	0
+min_caml_light:
+	.word	0
+	.word	0
+	.word	0
+min_caml_cos_v:
+	.word	0
+	.word	0
+min_caml_sin_v:
+	.word	0
+	.word	0
+min_caml_beam:
+	.word	1132396544 # 255.0
+min_caml_and_net:
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+	.word	-1
+min_caml_or_net:
+	.word	-1
+min_caml_temp:
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+min_caml_cs_temp:
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+min_caml_solver_dist:
+	.word	0
+min_caml_vscan:
+	.word	0
+	.word	0
+	.word	0
+min_caml_intsec_rectsize:
+	.word	0
+min_caml_tmin:
+	.word	1315859240 # 1.0 * 10 ^ 9
+min_caml_crashed_point:
+	.word	0
+	.word	0
+	.word	0
+min_caml_crashed_object:
+	.word	0
+min_caml_end_flag:
+	.word	0
+min_caml_viewpoint:
+	.word	0
+	.word	0
+	.word	0
+min_caml_nvector:
+	.word	0
+	.word	0
+	.word	0
+min_caml_rgb:
+	.word	0
+	.word	0
+	.word	0
+min_caml_texture_color:
+	.word	0
+	.word	0
+	.word	0
+min_caml_solver_w_vec:
+	.word	0
+	.word	0
+	.word	0
+min_caml_chkinside_p:
+	.word	0
+	.word	0
+	.word	0
+min_caml_isoutside_q:
+	.word	0
+	.word	0
+	.word	0
+min_caml_nvector_w:
+	.word	0
+	.word	0
+	.word	0
+min_caml_scan_d:
+	.word	0
+min_caml_scan_offset:
+	.word	0
+min_caml_sscany:
+	.word	0
+min_caml_met1:
+	.word	0
+min_caml_wscan:
+	.word	0
+	.word	0
+	.word	0
 x4:
 	.word	1086911939
 x3:
