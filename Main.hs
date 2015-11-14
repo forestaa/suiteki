@@ -17,7 +17,7 @@ type Instruction = [String]
 type Environment = M.Map String Int
 
 -- [("x1", (<address>, <value>)), ...]
-type DataMap = [(String, (String, String))]
+type DataMap = [(String, (Int, [String]))]
 
 data Args = Args { assembly :: String
                  , output :: String
@@ -69,10 +69,12 @@ writeBinary a = do
     let dataSection = concat $ extractData is
     let libDataSection = concat $ extractData ys
 
+    let d = dataSection ++ libDataSection
     let dataMap = if noExternals a
-                    then constructDataMap dataSection 65536
-                    else constructDataMap (dataSection ++ libDataSection) 65536
+                    then constructDataMap dataSection 65536 dataSection
+                    else constructDataMap d 65536 d
     let dataList = parseDataMap dataMap
+
 
     let libTextSection = expandLabelInLWC1 (concat $ extractText ys) dataMap
     let inputTextSection = expandLabelInLWC1 (concat $ extractText is) dataMap
@@ -109,8 +111,8 @@ expandLabelInLWC1 (i:is) dm
   where
     (baseName, _) = parseRegisterWithOffset (i !! 2)
     base = if head baseName == '$'
-             then addr baseName
-             else fst $ searchLabelInDataMap baseName dm
+             then baseName
+             else show $ fst $ searchLabelInDataMap baseName dm
 
 -- read library and add instructions recursively until there is no external
 -- function.
@@ -170,6 +172,7 @@ externalFunctions instructions e = nub $ allLabels instructions \\ locals
 parse :: [[String]] -> Int -> Environment -> DataMap -> [Instruction]
 parse [] _ _ _ = []
 parse (l:ls) pc e dm
+    -- | trace (show pc ++ " " ++ show l) False = undefined
     | null l               = parse ls pc e dm
     | head (head l) == '#' = parse ls pc e dm
     | isLabel l            = parse ls pc e dm
@@ -474,7 +477,7 @@ parseInstruction i pc e dm
     | trace (show i) False = undefined
     | otherwise           = []
 
-searchLabelInDataMap :: String -> DataMap -> (String, String)
+searchLabelInDataMap :: String -> DataMap -> (Int, [String])
 searchLabelInDataMap label dm = fromMaybe undefined $ lookup label dm
 
 -- lw $t0, 4($baseName) -> I (opcode, $baseName, $rt, <4 in binary>)
@@ -484,16 +487,13 @@ parseIndexedInstruction :: [String] -> DataMap -> [Instruction]
 parseIndexedInstruction i dm -- = I (opCode, base, rt, offset)
     | head i == "lw"   = [ [ "100011", base, addr (i !! 1), offset ] ]
     | head i == "sw"   = [ [ "101011", base, addr (i !! 1), offset ] ]
-    {- | head i == "lwc1"&& head baseName == '$' = [ [ "110001", base, addrF (i !! 1), offset ] ] -}
     | head i == "lwc1" = [ [ "110001", base, addrF (i !! 1), offset ] ]
     | head i == "swc1" = [ [ "111001", base, addrF (i !! 1), offset ] ]
     | otherwise = undefined
   where
     (baseName, immediateInDigit) = parseRegisterWithOffset (i !! 2)
     offset = binaryExp (read immediateInDigit) 16
-    base = if head baseName == '$'
-             then addr baseName
-             else fst $ searchLabelInDataMap baseName dm
+    base = addr baseName
 
 -- "3($r3)" -> ("$r3", "3")
 parseRegisterWithOffset :: String -> (String, String)
@@ -601,17 +601,21 @@ extractData xs@(i:is)
     ys = takeWhile p1 $ drop 1 xs
     p2 asm = head asm /= ".data"
 
-constructDataMap :: [[String]] -> Int -> [(String, (String, String))]
-constructDataMap [] _ = []
-constructDataMap [_] _ = undefined
-constructDataMap (l:v:xs) hp = (label, (show hp, binaryExp val 32)) : constructDataMap xs (hp + 1)
+constructDataMap :: [[String]] -> Int -> [[String]] -> DataMap
+constructDataMap [] _ _ = []
+constructDataMap [_] _ _ = undefined
+constructDataMap (l:_:xs) hp is = (label, (hp, val)) : constructDataMap (drop (k - 1) xs) (hp + k) is
   where
     label = takeWhile (/= ':') $ head l
-    val = read (v !! 1) :: Int  -- value = [".word", "11001100"] !! 1 = "11001100"
+    vs = drop 1 $ extractCodeBlock label is
+    val = map (\i -> binaryExp (read (i !! 1)) 32) vs  -- value = [".word", "11001100"] !! 1 = "11001100"
+    k = length vs
 
-parseDataMap :: [(String, (String, String))] -> [[String]]
+parseDataMap :: DataMap -> [[String]]
 parseDataMap [] = []
-parseDataMap ((_, (address, val)):xs) = [ address ] : [ val ] : parseDataMap xs
+parseDataMap ((_, (address, val)):xs) = [ binaryExp address 32 ] : val : [ magic ] : parseDataMap xs
+  where
+    magic = "01001000100000000000000000000000"
 
 -- Instructions without ".data" section
 extractText :: [[String]] -> [[[String]]]
