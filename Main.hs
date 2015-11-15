@@ -80,10 +80,6 @@ writeBinary a = do
                     else constructDataMap d 65536 d
     let dataList = parseDataMap dataMap
 
-    if debug a
-      then print dataList
-      else print ""
-
     let libTextSection = expandLabelInLWC1 (concat $ extractText ys) dataMap
     let inputTextSection = expandLabelInLWC1 (concat $ extractText is) dataMap
     let textSection = if noExternals a
@@ -622,7 +618,7 @@ constructDataMap :: [[String]] -> Int -> [[String]] -> DataMap
 constructDataMap [] _ _ = []
 constructDataMap [_] _ _ = error "constructDataMap failed"
 constructDataMap (l:_:xs) hp is
-  | trace (show hp ++ ": " ++ show l ++ ", k = " ++ show k ++ ", label = " ++ label) False = undefined
+  -- | trace (show hp ++ ": " ++ show l ++ ", k = " ++ show k ++ ", label = " ++ label) False = undefined
   | otherwise = (label, (hp, val)) : constructDataMap (drop (k - 1) xs) (hp + k) is
   where
     label = takeWhile (/= ':') $ head l
