@@ -226,18 +226,15 @@ create_array_cont:
 	addi	$hp, $hp, 1
 	j	create_array_loop
 min_caml_create_float_array:
-	move	$t1, $f12
-	move	$t0, $hp
+	move	$v0, $hp
 create_float_array_loop:
-	bne	$t1, $zero, create_array_cont
-	move	$f0, $hp
-	addi	$hp, $t0, 4
+	bne	$a0, $zero, create_float_array_cont
 	jr	$ra
 create_float_array_cont:
-	sw	$f13, 0($t0)
-	addi	$t1, $t1, -1
-	addi	$t0, $t0, 4
-	j	create_array_loop
+	sw	$f12, 0($hp)
+	addi	$a0, $a0, -1
+	addi	$hp, $hp, 1
+	j	create_float_array_loop
 min_caml_abs_float:
 	abs.s	$f0, $f12
 	jr	$ra
