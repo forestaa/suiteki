@@ -176,7 +176,6 @@ externalFunctions instructions e = nub $ allLabels instructions \\ locals
 parse :: [[String]] -> Int -> Environment -> DataMap -> [Instruction]
 parse [] _ _ _ = []
 parse (l:ls) pc e dm
-    -- | trace (show pc ++ " " ++ show l) False = undefined
     | null l               = parse ls pc e dm
     | head (head l) == '#' = parse ls pc e dm
     | isLabel l            = parse ls pc e dm
@@ -444,14 +443,14 @@ parseInstruction i pc e dm
                               , "00000"
                               , addr (i !! 1)
                               , addrF (i !! 2)
-                              , "0000000000"
+                              , "00000000000"
                               ]
                             ]
     | head i == "mtc1"    = [ [ "010001"
                               , "00100"
                               , addr (i !! 1)
                               , addrF (i !! 2)
-                              , "0000000000"
+                              , "00000000000"
                               ]
                             ]
     | head i == "cvt.s.w" = [ [ "010001"
