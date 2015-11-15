@@ -24,6 +24,7 @@ data Args = Args { assembly :: String
                  , output :: String
                  , library :: String
                  , debug :: Bool
+                 , showDataList :: Bool
                  , noExternals :: Bool
                  } deriving Show
 
@@ -47,6 +48,9 @@ args = Args
         ( long "debug"
        <> short 'd'
        <> help "Enable debug mode" )
+    <*> switch
+        ( long "show-data"
+       <> help "Show .data sections" )
     <*> switch
         ( long "no-externals"
        <> help "Do not use library (for debugging)" )
@@ -76,6 +80,10 @@ writeBinary a = do
                     else constructDataMap d 65536 d
     let dataList = parseDataMap dataMap
 
+    if debug a
+      then print dataList
+      else print ""
+
     let libTextSection = expandLabelInLWC1 (concat $ extractText ys) dataMap
     let inputTextSection = expandLabelInLWC1 (concat $ extractText is) dataMap
     let textSection = if noExternals a
@@ -86,7 +94,7 @@ writeBinary a = do
     let parsed = if debug a
                    then parseWithTrace textSection 0 labels dataMap
                    else parse textSection 0 labels dataMap
-    let ep = [binaryExp (fromMaybe undefined (M.lookup "_min_caml_start" labels)) 32]
+    let ep = [binaryExp (fromMaybe (error "couldn't locate entry point") (M.lookup "_min_caml_start" labels)) 32]
 
     let machineCode = dataList ++ [[magicNumber]] ++ [ep] ++ parsed
 
@@ -112,7 +120,7 @@ expandLabelInLWC1 (i:is) dm
     (baseName, _) = parseRegisterWithOffset (i !! 2)
     base = if head baseName == '$'
              then baseName
-             else show $ fst $ searchLabelInDataMap baseName dm
+             else show $ searchLabel baseName M.empty dm
 
 -- read library and add instructions recursively until there is no external
 -- function.
@@ -263,56 +271,56 @@ parseInstruction i pc e dm
                             ]
     | head i == "add.s"   = [ [ "010001"
                               , "10000"
-                              , addr (i !! 3)
-                              , addr (i !! 2)
-                              , addr (i !! 1)
+                              , addrF (i !! 3)
+                              , addrF (i !! 2)
+                              , addrF (i !! 1)
                               , "000000" ]
                             ]
     | head i == "sub.s"   = [ [ "010001"
                               , "10000"
-                              , addr (i !! 3)
-                              , addr (i !! 2)
-                              , addr (i !! 1)
+                              , addrF (i !! 3)
+                              , addrF (i !! 2)
+                              , addrF (i !! 1)
                               , "000001"
                               ]
                             ]
     | head i == "mul.s"   = [ [ "010001"
                               , "10000"
-                              , addr (i !! 3)
-                              , addr (i !! 2)
-                              , addr (i !! 1)
+                              , addrF (i !! 3)
+                              , addrF (i !! 2)
+                              , addrF (i !! 1)
                               , "000010"
                               ]
                             ]
     | head i == "div.s"   = [ [ "010001"
                               , "10000"
-                              , addr (i !! 3)
-                              , addr (i !! 2)
-                              , addr (i !! 1)
+                              , addrF (i !! 3)
+                              , addrF (i !! 2)
+                              , addrF (i !! 1)
                               , "000011"
                               ]
                             ]
     | head i == "abs.s"   = [ [ "010001"
                               , "10000"
                               , "00000"
-                              , addr (i !! 2)
-                              , addr (i !! 1)
+                              , addrF (i !! 2)
+                              , addrF (i !! 1)
                               , "000101"
                               ]
                             ]
     | head i == "sqrt.s"   = [ [ "010001"
                                , "10000"
                                , "00000"
-                               , addr (i !! 2)
-                               , addr (i !! 1)
+                               , addrF (i !! 2)
+                               , addrF (i !! 1)
                                , "000100"
                                ]
                              ]
     | head i == "mov.s"   = [ [ "010001"
                               , "10000"
                               , "00000"
-                              , addr (i !! 2)
-                              , addr (i !! 1)
+                              , addrF (i !! 2)
+                              , addrF (i !! 1)
                               , "000110"
                               ]
                             ]
@@ -474,11 +482,18 @@ parseInstruction i pc e dm
                               ]
                             ]
     | head i == "magic"   = [ [ "11111111111111111111111111111111" ] ]
-    | trace (show i) False = undefined
+    | trace (show i) False = error (show i ++ " is not a valid operation")
     | otherwise           = []
 
-searchLabelInDataMap :: String -> DataMap -> (Int, [String])
-searchLabelInDataMap label dm = fromMaybe undefined $ lookup label dm
+searchLabel :: String -> Environment -> DataMap -> Int
+searchLabel label e dm
+  | isJust x = fst $ fromMaybe (error "searchLabel") x
+  | otherwise = fromMaybe (error "searchLabel") $ M.lookup label e
+  where
+    x = lookup label dm
+
+searchLabelInDataMap :: String -> DataMap -> Int
+searchLabelInDataMap label dm = fst $ fromMaybe (error $ show label ++ " not found\ndataMap: " ++ show dm) $ lookup label dm
 
 -- lw $t0, 4($baseName) -> I (opcode, $baseName, $rt, <4 in binary>)
 -- If the base name is not prefixed by '$', then the name is regarded as
@@ -511,7 +526,7 @@ expandLI i pc e dm = instructionLUI ++ instructionORI
   where
     immediate = if isJust (readMaybe (i !! 2) :: Maybe Int)
                   then binaryExp (read (i !! 2)) 32
-                  else binaryExp (fst $ searchLabelInDataMap (i !! 2) dm) 32
+                  else binaryExp (searchLabel (i !! 2) e dm) 32
     upper = show . toDec $ take 16 immediate
     lower = show . toDec $ drop 16 immediate
     lui = [ "lui" , i !! 1 , upper ]
@@ -561,13 +576,13 @@ extendEnv e label i = M.insert (take (length label - 1) label) i e
 labelToAddr :: String -> Int -> Environment -> Int -> String
 labelToAddr label currentLine e len = addrDiff
   where
-    lineNum = fromMaybe undefined (M.lookup label e)
+    lineNum = fromMaybe (error $ "label " ++ show label ++ " is not found") (M.lookup label e)
     addrDiff = binaryExp (lineNum - currentLine) len
 
 labelToAbsAddr :: String -> Environment -> Int -> String
 labelToAbsAddr label e = binaryExp lineNum
   where
-    lineNum = fromMaybe undefined (M.lookup label e)
+    lineNum = fromMaybe (error $ "labelToAbsAddr: label " ++ show label ++ " not found in: " ++ show e) (M.lookup label e)
 
 -- Extract the code block of given |label|.
 -- e.g. if |instructions| is as follows:
@@ -588,8 +603,8 @@ labelToAbsAddr label e = binaryExp lineNum
 extractCodeBlock :: String -> [[String]] -> [[String]]
 extractCodeBlock label is = takeWhile p1 $ dropWhile p2 is
   where
-    p1 i = i == [label ++ ":"] || not (isLabel i)
-    p2 i = i /= [label ++ ":"]
+    p1 i = take 1 i == [label ++ ":"] || not (isLabel i)
+    p2 i = take 1 i /= [label ++ ":"]
 
 extractData :: [[String]] -> [[[String]]]
 extractData [] = []
@@ -607,6 +622,7 @@ constructDataMap :: [[String]] -> Int -> [[String]] -> DataMap
 constructDataMap [] _ _ = []
 constructDataMap [_] _ _ = error "constructDataMap failed"
 constructDataMap (l:_:xs) hp is
+  | trace (show hp ++ ": " ++ show l ++ ", k = " ++ show k ++ ", label = " ++ label) False = undefined
   | otherwise = (label, (hp, val)) : constructDataMap (drop (k - 1) xs) (hp + k) is
   where
     label = takeWhile (/= ':') $ head l

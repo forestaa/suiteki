@@ -34,7 +34,7 @@ blez_else.24:
 	jr	$ra
 _min_caml_start: # main entry point
    # main program start
-	li	$v0, 30
+	li	$v0, 10
 	move	$t8, $ra
 	move	$a0, $v0
 	sw	$t8, 4($sp)
