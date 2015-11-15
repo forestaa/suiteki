@@ -108,8 +108,8 @@ expandLabelInLWC1 :: [[String]] -> DataMap -> [[String]]
 expandLabelInLWC1 [] _ = []
 expandLabelInLWC1 (i:is) dm
     | null i = expandLabelInLWC1 is dm
-    | head i == "lwc1" && head baseName /= '$' = [ [ "li", "$ra", base ]
-                                                 , [ "lwc1", i !! 1, "0($ra)" ]
+    | head i == "lwc1" && head baseName /= '$' = [ [ "li", "$at", base ]
+                                                 , [ "lwc1", i !! 1, "0($at)" ]
                                                  ] ++ expandLabelInLWC1 is dm
     | otherwise = i : expandLabelInLWC1 is dm
   where
