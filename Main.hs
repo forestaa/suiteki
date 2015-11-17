@@ -258,10 +258,10 @@ parseInstruction i pc e dm
                               , "000000" ]
                             ]
     | head i == "sllv"     = [ [ "000000"
-                              , "00000"
                               , addr (i !! 3)
                               , addr (i !! 2)
                               , addr (i !! 1)
+                              , "00000"
                               , "000100" ]
                             ]
     | head i == "srl"     = [ [ "000000"
