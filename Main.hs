@@ -257,6 +257,13 @@ parseInstruction i pc e dm
                               , binaryExp (read (i !! 3)) 5
                               , "000000" ]
                             ]
+    | head i == "sllv"     = [ [ "000000"
+                              , "00000"
+                              , addr (i !! 3)
+                              , addr (i !! 2)
+                              , addr (i !! 1)
+                              , "000100" ]
+                            ]
     | head i == "srl"     = [ [ "000000"
                               , "00000"
                               , addr (i !! 2)
