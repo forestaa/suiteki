@@ -26,6 +26,7 @@ min_caml_print_int_cont:
 	sw	$ra, 0($sp)
 	addi    $sp, $sp, -4
 	jal	div10
+# この時点でv0が商、v1があまり。
 	addi    $sp, $sp, 4
 	lw	$ra, 0($sp)
 	bgtz	$v0, min_caml_print_int_rec
@@ -352,31 +353,38 @@ min_caml_atan:
 	jr	$ra
 mul:
 # calculate a0 * a1.
-# firstly, find the nearest multiple of 2 below a0.
-# e.g., 5 -> (4, 2), 12 -> (8, 3), 255 -> (128, 7)
-	li	$t0, 1 # x = 1
-	li	$t1, 0 # y = 0
-	li	$t7, 1 # const
-mul_nearest_multiple:
-	addi	$t2, $t1, 1
-	sllv	$t3, $t7, $t2
-	sub	$t4, $a1, $t3
-	blez	$t4, mul_calc
-	move	$t1, $t2
-	move	$t0, $t3
-	j	mul_nearest_multiple
-mul_calc:
-	sub	$t2, $a1, $t0
-	sllv	$v0, $a0, $t1
-mul_add_diff:
-	blez	$t2, mul_cont
-	add	$v0, $v0, $a0
-	addi	$t2, $t2, -1
-	j	mul_add_diff
-mul_cont:
+	li	$v0, 0
+	beq	$a0, $zero, mul_return_b
+	j	mul_loop
+mul_return_b:
+	move	$v0, $a1
+	jr	$ra
+mul_loop:
+	beq	$a0, $zero, mul_final
+	li	$s0, 1
+	and	$s0, $a0, $s0
+	bne	$s0, $zero, mul_if_true
+	j	mul_loop_cont
+mul_if_true: # if a0 is odd
+	add	$v0, $v0, $a1
+mul_loop_cont:
+	srl	$a0, $a0, 1
+	sll	$a1, $a1, 1
+	j	mul_loop
+mul_final:
 	jr	$ra
 div10:
-	move	$t8, $a0
+	move	$t8, $a0 # assume a0 = 4
+	li	$t0, 10
+	addi	$t0, $a0, -10
+	blez	$t0, div10_smaller_than_10
+	j	div10_cont
+div10_smaller_than_10:
+	li	$t0, 0
+	move	$v0, 0
+	move	$v1, $a0
+	jr	$ra
+div10_cont:
 	li	$t0, 10 # de = 10
 	li	$t1, 1 # temp = 1
 	li	$t2, 0 # quotient = 0
