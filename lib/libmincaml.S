@@ -96,16 +96,16 @@ min_caml_read_char:
 	addi    $sp, $sp, -4
 	syscall
 	addi    $sp, $sp, 4
-	sw	$ra, 0($sp)
+	lw	$ra, 0($sp)
 	jr	$ra
 min_caml_read_int:
 	li	$t0, 0 # 文字列のカウンタ
 	move	$t6, $hp # heap pointerの初期位置を覚えておく
 min_caml_read_int_read_input:
-	sw	$t0, 0($sp)
+	sw	$t0, 0($sp) # save counter
 	addi	$sp, $sp, -4
 	jal	min_caml_read_char
-	addi	$sp, $sp, 4
+	addi	$sp, $sp, 4 # back
 	lw	$t0, 0($sp)
 	addi	$t2, $v0, -32  # space?
 	beq	$t2, $r0, min_caml_read_int_calc
