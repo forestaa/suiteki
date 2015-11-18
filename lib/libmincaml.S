@@ -5,7 +5,7 @@ min_caml_print_newline:
 	addi    $sp, $sp, -4
 	jal	min_caml_print_byte
 	addi    $sp, $sp, 4
-	sw	$ra, 0($sp)
+	lw	$ra, 0($sp)
 	jr	$ra
 min_caml_print_int:
 	sw	$ra, 0($sp)
