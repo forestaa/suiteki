@@ -377,7 +377,7 @@ div10:
 	move	$t8, $a0 # assume a0 = 4
 	li	$t0, 10
 	addi	$t0, $a0, -10
-	blez	$t0, div10_smaller_than_10
+	bltz	$t0, div10_smaller_than_10
 	j	div10_cont
 div10_smaller_than_10:
 	li	$t0, 0
