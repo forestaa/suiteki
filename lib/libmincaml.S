@@ -111,6 +111,8 @@ min_caml_read_int_read_input:
 	lw	$t0, 0($sp)
 	addi	$t2, $v0, -32  # space?
 	beq	$t2, $r0, min_caml_read_int_calc
+	addi	$t2, $v0, -10  # newline?
+	beq	$t2, $r0, min_caml_read_int_calc
 	beq	$v0, $r0, min_caml_read_int_finalize # null char?
 	sw	$v0, 0($hp)
 	addi	$hp, $hp, 1
@@ -118,13 +120,13 @@ min_caml_read_int_read_input:
 	j	min_caml_read_int_read_input
 min_caml_read_int_calc:
 	# この時点で$t0には文字列の長さが入っている。
-	# また$t6+4*iにi文字目の文字が入っている。
+	# また$t6+iにi (= 0, 1, ...) 文字目の文字が入っている。
 	move	$t2, $hp # 文字列を後ろからたどるためのポインタ
-	addi	$t6, $t6, -4 # ループ終了の判定に使う。
+	addi	$t6, $t6, -1 # ループ終了の判定に使う。
 	li	$t1, 1 # ループごとに10倍される値。
 	li	$v0, 0
 	# 文字を後ろから読んでいく。
-	addi	$t2, $t2, -4
+	addi	$t2, $t2, -1
 min_caml_read_int_for_loop:
 	beq	$t2, $t6, min_caml_read_int_finalize
 	# 1文字読む
@@ -141,7 +143,7 @@ min_caml_read_int_for_loop:
 	move	$a1, $t1
 	addi	$sp, $sp, -28
 	jal	mul
-	addi	$sp, -sp, 28
+	addi	$sp, $sp, 28
 	sw	$v0, -24($sp)
 	# $t1を10倍する
 	lw	$a0, -8($sp) # t1をロードしてa0に代入
@@ -156,7 +158,7 @@ min_caml_read_int_for_loop:
 	lw	$t2, -12($sp)
 	lw	$t3, -16($sp)
 	lw	$v0, -24($sp)
-	addi	$t2, $t2, -4
+	addi	$t2, $t2, -1
 	j	min_caml_read_int_for_loop
 min_caml_read_int_finalize:
 	jr	$ra
