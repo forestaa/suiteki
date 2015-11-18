@@ -231,7 +231,7 @@ create_float_array_loop:
 	bne	$a0, $zero, create_float_array_cont
 	jr	$ra
 create_float_array_cont:
-	sw	$f12, 0($hp)
+	swc1	$f12, 0($hp)
 	addi	$a0, $a0, -1
 	addi	$hp, $hp, 1
 	j	create_float_array_loop
@@ -336,14 +336,29 @@ min_caml_atan:
 	mul.s	$f0, $f19, $f12
 	jr	$ra
 mul:
-	li	$v0, 0
-	li	$t0, 1
+# calculate a0 * a1.
+# firstly, find the nearest multiple of 2 below a0.
+# e.g., 5 -> (4, 2), 12 -> (8, 3), 255 -> (128, 7)
+	li	$t0, 1 # x = 1
+	li	$t1, 0 # y = 0
+	li	$t7, 1 # const
+mul_nearest_multiple:
+	addi	$t2, $t1, 1
+	sllv	$t3, $t7, $t2
+	sub	$t4, $a1, $t3
+	blez	$t4, mul_calc
+	move	$t1, $t2
+	move	$t0, $t3
+	j	mul_nearest_multiple
 mul_calc:
-	blez	$a1, mul_return
+	sub	$t2, $a1, $t0
+	sllv	$v0, $a0, $t1
+mul_add_diff:
+	blez	$t2, mul_cont
 	add	$v0, $v0, $a0
-	sub	$a1, $a1, $t0
-	j	mul_calc
-mul_return:
+	addi	$t2, $t2, -1
+	j	mul_add_diff
+mul_cont:
 	jr	$ra
 div10:
 	move	$t8, $a0
