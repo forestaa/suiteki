@@ -101,6 +101,7 @@ min_caml_read_char:
 min_caml_read_int:
 	li	$t0, 0 # 文字列のカウンタ
 	move	$t6, $hp # heap pointerの初期位置を覚えておく
+	li	$t7, 1 # $t7 = 0 if and only if the given integer-string repesents negative
 min_caml_read_int_read_input:
 	sw	$t0, 0($sp) # save counter
 	sw	$ra, 1($sp) # save link reg.
@@ -113,10 +114,15 @@ min_caml_read_int_read_input:
 	beq	$t2, $r0, min_caml_read_int_calc
 	addi	$t2, $v0, -10  # newline?
 	beq	$t2, $r0, min_caml_read_int_calc
+	addi	$t2, $v0, -45  # hyphen?
+	beq	$t2, $r0, min_caml_read_int_negative
 	beq	$v0, $r0, min_caml_read_int_finalize # null char?
 	sw	$v0, 0($hp)
 	addi	$hp, $hp, 1
 	addi	$t0, $t0, 1
+	j	min_caml_read_int_read_input
+min_caml_read_int_negative:
+	li	$t7, 0
 	j	min_caml_read_int_read_input
 min_caml_read_int_calc:
 	# この時点で$t0には文字列の長さが入っている。
@@ -134,33 +140,43 @@ min_caml_read_int_for_loop:
 	addi	$t3, $t3, -48 # Char -> Int
 	# 「$t3 * (ループごとに10倍される値)」の計算
 	sw	$ra, 0($sp)
-	sw	$t0, -4($sp)
-	sw	$t1, -8($sp)
-	sw	$t2, -12($sp)
-	sw	$t3, -16($sp)
-	sw	$v0, -24($sp)
+	sw	$t0, -1($sp)
+	sw	$t1, -2($sp)
+	sw	$t2, -3($sp)
+	sw	$t3, -4($sp)
+	sw	$t7, -5($sp)
+	sw	$v0, -6($sp)
 	move	$a0, $t3
 	move	$a1, $t1
-	addi	$sp, $sp, -28
+	addi	$sp, $sp, -7
 	jal	mul
-	addi	$sp, $sp, 28
-	sw	$v0, -24($sp)
+	addi	$sp, $sp, 7
+	# $v0の更新
+	lw	$t8, -6($sp)
+	add	$t8, $t8, $v0
+	sw	$t8, -6($sp)
 	# $t1を10倍する
-	lw	$a0, -8($sp) # t1をロードしてa0に代入
+	lw	$a0, -2($sp) # t1をロードしてa0に代入
 	li	$a1, 10
-	addi	$sp, $sp, -28
+	addi	$sp, $sp, -7
 	jal	mul
-	addi	$sp, $sp, 28
+	addi	$sp, $sp, 7
 	move	$t1, $v0 # t1を10倍された値で更新
 	# 値を$spから再取得
 	lw	$ra, 0($sp)
-	lw	$t0, -4($sp)
-	lw	$t2, -12($sp)
-	lw	$t3, -16($sp)
-	lw	$v0, -24($sp)
+	lw	$t0, -1($sp)
+	lw	$t2, -3($sp)
+	lw	$t3, -4($sp)
+	lw	$t7, -5($sp)
+	lw	$v0, -6($sp)
 	addi	$t2, $t2, -1
 	j	min_caml_read_int_for_loop
 min_caml_read_int_finalize:
+	beq	$t7, $r0, min_caml_read_int_negate
+	j	min_caml_read_int_finish
+min_caml_read_int_negate:
+	sub	$v0, $r0, $v0
+min_caml_read_int_finish:
 	jr	$ra
 min_caml_read_float:
 	li	$t0, 0 # 文字列のカウンタ
