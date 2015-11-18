@@ -113,7 +113,7 @@ min_caml_read_int_read_input:
 	beq	$t2, $r0, min_caml_read_int_calc
 	beq	$v0, $r0, min_caml_read_int_finalize # null char?
 	sw	$v0, 0($hp)
-	addi	$hp, $hp, 4
+	addi	$hp, $hp, 1
 	addi	$t0, $t0, 1
 	j	min_caml_read_int_read_input
 min_caml_read_int_calc:
