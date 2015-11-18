@@ -8,6 +8,21 @@ min_caml_print_newline:
 	lw	$ra, 0($sp)
 	jr	$ra
 min_caml_print_int:
+	bltz	$a0, min_caml_print_int_minus
+	j	min_caml_print_int_cont
+min_caml_print_int_minus:
+	# print '-'
+	sw	$a0, 0($sp)
+	li	$a0, 45
+	sw	$ra, -1($sp)
+	addi    $sp, $sp, -4
+	jal	min_caml_print_byte
+	addi    $sp, $sp, 4
+	lw	$ra, -1($sp)
+	lw	$a0, 0($sp)
+	li	$t0, 0
+	sub	$a0, $t0, $a0 # negate a0
+min_caml_print_int_cont:
 	sw	$ra, 0($sp)
 	addi    $sp, $sp, -4
 	jal	div10
@@ -20,7 +35,7 @@ min_caml_print_int_rec:
 	sw	$v1, -4($sp)
 	move	$a0, $v0
 	addi    $sp, $sp, -8
-	jal	min_caml_print_int
+	jal	min_caml_print_int_cont
 	addi    $sp, $sp, 8
 	lw	$ra, 0($sp)
 	lw	$v1, -4($sp)
