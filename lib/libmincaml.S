@@ -103,12 +103,15 @@ min_caml_read_int:
 	move	$t6, $hp # heap pointerの初期位置を覚えておく
 min_caml_read_int_read_input:
 	sw	$t0, 0($sp) # save counter
-	addi	$sp, $sp, -4
+	sw	$ra, 1($sp) # save link reg.
+	addi	$sp, $sp, -2
 	jal	min_caml_read_char
-	addi	$sp, $sp, 4 # back
+	addi	$sp, $sp, 2 # back
+	lw	$ra, 1($sp) # load link reg.
 	lw	$t0, 0($sp)
 	addi	$t2, $v0, -32  # space?
 	beq	$t2, $r0, min_caml_read_int_calc
+	beq	$v0, $r0, min_caml_read_int_finalize # null char?
 	sw	$v0, 0($hp)
 	addi	$hp, $hp, 4
 	addi	$t0, $t0, 1
