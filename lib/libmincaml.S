@@ -355,20 +355,24 @@ min_caml_cos:
 	lwc1	$f4, 0(x3)
 	c.olt.s	0, $f12, $f4
 	bc1t	0, cos_branch3
-        li	$f0, 1
+	li	$t0, 1
+	mtc1	$t0, $f0
 	sub.s	$f12, $f12, $f4
 	j	calc
 cos_branch3:
-        li	$f0, -1
+	li	$t0, -1
+	mtc1	$t0, $f0
 	sub.s	$f12, $f4, $f12
 	j	calc
 cos_branch2:
 	lwc1	$f4, 0(x1)
-        li	$f0, -1
+	li	$t0, -1
+	mtc1	$t0, $f0
 	sub.s	$f12, $f12, $f4
 	j	calc
 cos_branch1:
-        li	$f0, 1
+	li	$t0, 1
+	mtc1	$t0, $f0
 	sub.s	$f12, $f4, $f12
 	j	calc
 min_caml_sin:
@@ -382,19 +386,23 @@ min_caml_sin:
 	c.olt.s	0, $f12, $f4
 	bc1t	0, sin_branch3
 	lwc1	$f4, 0(x4)
-        li	$f0, -1
+	li	$t0, -1
+	mtc1	$t0, $f0
 	sub.s	$f12, $f4, $f12
 	j	calc
 sin_branch3:
-        li	$f0, -1
+	li	$t0, -1
+	mtc1	$t0, $f0
 	sub.s	$f12, $f12, $f4
 	j	calc
 sin_branch2:
-        li	$f0, 1
+	li	$t0, 1
+	mtc1	$t0, $f0
 	sub.s	$f12, $f4, $f12
 	j	calc
 sin_branch1:
-        li	$f0, 1
+	li	$t0, 1
+	mtc1	$t0, $f0
 calc:
 	lwc1	$f16, 0(a1)
 	lwc1	$f17, 0(a2)
@@ -452,7 +460,7 @@ div10:
 	j	div10_cont
 div10_smaller_than_10:
 	li	$t0, 0
-	move	$v0, 0
+	move	$v0, $r0
 	move	$v1, $a0
 	jr	$ra
 div10_cont:
