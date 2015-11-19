@@ -181,70 +181,84 @@ min_caml_read_int_finish:
 min_caml_read_float:
 	li	$t0, 0 # 文字列のカウンタ
 	move	$t6, $hp # heap pointerの初期位置を覚えておく
+	li	$t7, 1 # $t7 = 0 if and only if the given integer-string repesents negative
 min_caml_read_float_read_input:
-	sw	$t0, 0($sp)
-	addi	$sp, $sp, -4
+	sw	$t0, 0($sp) # save counter
+	sw	$ra, 1($sp) # save link reg.
+	addi	$sp, $sp, -2
 	jal	min_caml_read_char
-	addi	$sp, $sp, 4
+	addi	$sp, $sp, 2 # back
+	lw	$ra, 1($sp) # load link reg.
 	lw	$t0, 0($sp)
 	addi	$t2, $v0, -32  # space?
 	beq	$t2, $r0, min_caml_read_float_calc
+	addi	$t2, $v0, -10  # newline?
+	beq	$t2, $r0, min_caml_read_float_calc
+	addi	$t2, $v0, -45  # hyphen?
+	beq	$t2, $r0, min_caml_read_float_negative
+	addi	$t2, $v0, -46  # dot?
+	beq	$t2, $r0, min_caml_read_float_read_input
+	beq	$v0, $r0, min_caml_read_float_finalize # null char?
 	sw	$v0, 0($hp)
-	addi	$hp, $hp, 4
+	addi	$hp, $hp, 1
 	addi	$t0, $t0, 1
 	j	min_caml_read_float_read_input
+min_caml_read_float_negative:
+	li	$t7, 0
+	j	min_caml_read_float_read_input
 min_caml_read_float_calc:
+	# この時点で$t0には文字列の長さが入っている。
+	# また$t6+iにi (= 0, 1, ...) 文字目の文字が入っている。
 	move	$t2, $hp # 文字列を後ろからたどるためのポインタ
-	addi	$t6, $t6, -4 # ループ終了の判定に使う。
-	li	$t1, 1 # ループごとに10倍する値
-	li	$v0, 0 # result * 10 (int)
+	addi	$t6, $t6, -1 # ループ終了の判定に使う。
+	li	$t1, 1 # ループごとに10倍される値。
+	li	$v0, 0
 	# 文字を後ろから読んでいく。
-	addi	$t7, $t0, -1 # ループにおけるi (jの算出に必要)
-	addi	$t2, $t2, -4
+	addi	$t2, $t2, -1
 min_caml_read_float_for_loop:
 	beq	$t2, $t6, min_caml_read_float_finalize
-	addi	$t4, $t0, -2
-	sub	$t4, $t4, $t7
-	bgez	$t4, min_caml_read_float_question_true
-	move	$t5, $t7
-	j	min_caml_read_float_question_after
-min_caml_read_float_question_true:
-	addi	$t5, $t7, -4 # j = i - 1
-min_caml_read_float_question_after:
-	sub	$t4, $t6, $t5 # 元のポインタ - 読もうとするポインタ
-	bltz	$t4, min_caml_read_float_finalize
-	# 後ろから1文字読む
-	lw	$t3, 0($t5)
-	addi	$t3, $t3, -48
+	# 1文字読む
+	lw	$t3, 0($t2)
+	addi	$t3, $t3, -48 # Char -> Int
+	# 「$t3 * (ループごとに10倍される値)」の計算
 	sw	$ra, 0($sp)
-	sw	$t0, -4($sp)
-	sw	$t1, -8($sp)
-	sw	$t2, -12($sp)
-	sw	$t3, -16($sp)
-	sw	$t8, -20($sp)
-	sw	$v0, -24($sp)
+	sw	$t0, -1($sp)
+	sw	$t1, -2($sp)
+	sw	$t2, -3($sp)
+	sw	$t3, -4($sp)
+	sw	$t7, -5($sp)
+	sw	$v0, -6($sp)
 	move	$a0, $t3
 	move	$a1, $t1
-	addi	$sp, $sp, -28
-	jal	mul # (str[j] - 48) * dの計算
-	addi	$sp, $sp, 28
-	sw	$v0, -24($sp)
-	lw	$a0, -8($sp)
+	addi	$sp, $sp, -7
+	jal	mul
+	addi	$sp, $sp, 7
+	# $v0の更新
+	lw	$t8, -6($sp)
+	add	$t8, $t8, $v0
+	sw	$t8, -6($sp)
+	# $t1を10倍する
+	lw	$a0, -2($sp) # t1をロードしてa0に代入
 	li	$a1, 10
-	addi	$sp, $sp, -28
-	jal	mul # d * 10の計算
-	addi	$sp, $sp, 28
-	move	$t1, $v0
+	addi	$sp, $sp, -7
+	jal	mul
+	addi	$sp, $sp, 7
+	move	$t1, $v0 # t1を10倍された値で更新
+	# 値を$spから再取得
 	lw	$ra, 0($sp)
-	lw	$t0, -4($sp)
-	lw	$t2, -12($sp)
-	lw	$t3, -16($sp)
-	lw	$t8, -20($sp)
-	lw	$v0, -24($sp)
-	addi	$t7, $t7, -1 # iをデクリメント
-	addi	$t2, $t2, -4 # 1文字前にポインタを移動
+	lw	$t0, -1($sp)
+	lw	$t2, -3($sp)
+	lw	$t3, -4($sp)
+	lw	$t7, -5($sp)
+	lw	$v0, -6($sp)
+	addi	$t2, $t2, -1
 	j	min_caml_read_float_for_loop
 min_caml_read_float_finalize:
+	beq	$t7, $r0, min_caml_read_float_negate
+	j	min_caml_read_float_finish
+min_caml_read_float_negate:
+	sub	$v0, $r0, $v0
+min_caml_read_float_finish:
 	mtc1	$v0, $f0
 	li	$t8, 10
 	mtc1	$t8, $f1
