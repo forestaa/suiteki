@@ -115,6 +115,8 @@ min_caml_read_int_start:
 	li	$t0, 0 # 文字列のカウンタ
 	move	$t6, $hp # heap pointerの初期位置を覚えておく
 	li	$t7, 1 # $t7 = 0 if and only if the given integer-string repesents negative
+	addi	$t2, $v0, -45  # hyphen?
+	beq	$t2, $r0, min_caml_read_int_negative
 	sw	$v0, 0($hp)
 	addi	$hp, $hp, 1
 	addi	$t0, $t0, 1
@@ -213,6 +215,8 @@ min_caml_read_float_start:
 	li	$t0, 0 # 文字列のカウンタ
 	move	$t6, $hp # heap pointerの初期位置を覚えておく
 	li	$t7, 1 # $t7 = 0 if and only if the given integer-string repesents negative
+	addi	$t2, $v0, -45  # hyphen?
+	beq	$t2, $r0, min_caml_read_float_negative
 	sw	$v0, 0($hp)
 	addi	$hp, $hp, 1
 	addi	$t0, $t0, 1
@@ -301,6 +305,7 @@ min_caml_read_float_finish:
 	cvt.s.w	$f0, $f0
 	cvt.s.w	$f1, $f1
 	div.s	$f0, $f0, $f1
+	mfc1	$v0, $f0
 	jr	$ra
 min_caml_create_array:
 	move	$v0, $hp # (return value)
@@ -323,7 +328,13 @@ create_float_array_cont:
 	addi	$hp, $hp, 1
 	j	create_float_array_loop
 min_caml_abs_float:
-	abs.s	$f0, $f12
+	li	$t0, 0
+	mtc1	$t0, $f3
+	c.olt.s	0, $f12, $f3
+	bc1t	0, min_caml_abs_negate
+	jr	$ra
+min_caml_abs_negate:
+	neg.s	$f0, $f12
 	jr	$ra
 min_caml_sqrt:
 	sqrt.s	$f0, $f12
@@ -338,11 +349,12 @@ min_caml_floor:
 	jr	$ra
 min_caml_int_of_float:
 min_caml_truncate:
-	trunc.w.s	$f12, $f12
-	mfc1	$v0, $f12
+	mtc1	$v0, $f1
+	trunc.w.s	$f1, $f1 # trunc.w.s	$f12, $f12
+	mfc1	$v0, $f1
 	jr	$ra
 min_caml_float_of_int:
-	mtc1	$v0, $f0
+	mtc1	$a0, $f0
 	cvt.s.w	$f0, $f0
 	jr	$ra
 min_caml_cos:
@@ -1489,6 +1501,8 @@ min_caml_sin_v:
 	.word	0
 min_caml_beam:
 	.word	1132396544 # 255.0
+min_caml_or_net:
+	.word	-1
 min_caml_and_net:
 	.word	-1
 	.word	-1
@@ -1539,8 +1553,6 @@ min_caml_and_net:
 	.word	-1
 	.word	-1
 	.word	-1
-	.word	-1
-min_caml_or_net:
 	.word	-1
 min_caml_temp:
 	.word	0
