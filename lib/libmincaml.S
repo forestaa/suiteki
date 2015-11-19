@@ -114,6 +114,8 @@ min_caml_read_int_read_input:
 	beq	$t2, $r0, min_caml_read_int_calc
 	addi	$t2, $v0, -10  # newline?
 	beq	$t2, $r0, min_caml_read_int_calc
+	addi	$t2, $v0, -12  # newline?
+	beq	$t2, $r0, min_caml_read_int_calc
 	addi	$t2, $v0, -45  # hyphen?
 	beq	$t2, $r0, min_caml_read_int_negative
 	beq	$v0, $r0, min_caml_read_int_finalize # null char?
@@ -194,6 +196,8 @@ min_caml_read_float_read_input:
 	beq	$t2, $r0, min_caml_read_float_calc
 	addi	$t2, $v0, -10  # newline?
 	beq	$t2, $r0, min_caml_read_float_calc
+	addi	$t2, $v0, -12  # newline?
+	beq	$t2, $r0, min_caml_read_int_calc
 	addi	$t2, $v0, -45  # hyphen?
 	beq	$t2, $r0, min_caml_read_float_negative
 	addi	$t2, $v0, -46  # dot?
@@ -389,10 +393,10 @@ min_caml_atan:
 mul:
 # calculate a0 * a1.
 	li	$v0, 0
-	beq	$a0, $zero, mul_return_b
+	beq	$a0, $zero, mul_return_zero
 	j	mul_loop
-mul_return_b:
-	move	$v0, $a1
+mul_return_zero:
+	li	$v0, 0
 	jr	$ra
 mul_loop:
 	beq	$a0, $zero, mul_final
