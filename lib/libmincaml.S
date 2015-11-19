@@ -99,16 +99,32 @@ min_caml_read_char:
 	lw	$ra, 0($sp)
 	jr	$ra
 min_caml_read_int:
+min_caml_read_int_pass:
+	sw	$ra, 0($sp) # save link reg.
+	addi	$sp, $sp, -1
+	jal	min_caml_read_char
+	addi	$sp, $sp, 1 # back
+	lw	$ra, 0($sp) # load link reg.
+	addi	$t2, $v0, -32  # space?
+	beq	$t2, $r0, min_caml_read_int_pass
+	addi	$t2, $v0, -10  # newline?
+	beq	$t2, $r0, min_caml_read_int_pass
+	addi	$t2, $v0, -12  # newline?
+	beq	$t2, $r0, min_caml_read_int_pass
+min_caml_read_int_start:
 	li	$t0, 0 # 文字列のカウンタ
 	move	$t6, $hp # heap pointerの初期位置を覚えておく
 	li	$t7, 1 # $t7 = 0 if and only if the given integer-string repesents negative
+	sw	$v0, 0($hp)
+	addi	$hp, $hp, 1
+	addi	$t0, $t0, 1
 min_caml_read_int_read_input:
 	sw	$t0, 0($sp) # save counter
-	sw	$ra, 1($sp) # save link reg.
+	sw	$ra, -1($sp) # save link reg.
 	addi	$sp, $sp, -2
 	jal	min_caml_read_char
 	addi	$sp, $sp, 2 # back
-	lw	$ra, 1($sp) # load link reg.
+	lw	$ra, -1($sp) # load link reg.
 	lw	$t0, 0($sp)
 	addi	$t2, $v0, -32  # space?
 	beq	$t2, $r0, min_caml_read_int_calc
@@ -181,23 +197,39 @@ min_caml_read_int_negate:
 min_caml_read_int_finish:
 	jr	$ra
 min_caml_read_float:
+min_caml_read_float_pass:
+	sw	$ra, 0($sp) # save link reg.
+	addi	$sp, $sp, -1
+	jal	min_caml_read_char
+	addi	$sp, $sp, 1 # back
+	lw	$ra, 0($sp) # load link reg.
+	addi	$t2, $v0, -32  # space?
+	beq	$t2, $r0, min_caml_read_float_pass
+	addi	$t2, $v0, -10  # newline?
+	beq	$t2, $r0, min_caml_read_float_pass
+	addi	$t2, $v0, -12  # newline?
+	beq	$t2, $r0, min_caml_read_float_pass
+min_caml_read_float_start:
 	li	$t0, 0 # 文字列のカウンタ
 	move	$t6, $hp # heap pointerの初期位置を覚えておく
 	li	$t7, 1 # $t7 = 0 if and only if the given integer-string repesents negative
+	sw	$v0, 0($hp)
+	addi	$hp, $hp, 1
+	addi	$t0, $t0, 1
 min_caml_read_float_read_input:
 	sw	$t0, 0($sp) # save counter
-	sw	$ra, 1($sp) # save link reg.
+	sw	$ra, -1($sp) # save link reg.
 	addi	$sp, $sp, -2
 	jal	min_caml_read_char
 	addi	$sp, $sp, 2 # back
-	lw	$ra, 1($sp) # load link reg.
+	lw	$ra, -1($sp) # load link reg.
 	lw	$t0, 0($sp)
 	addi	$t2, $v0, -32  # space?
 	beq	$t2, $r0, min_caml_read_float_calc
 	addi	$t2, $v0, -10  # newline?
 	beq	$t2, $r0, min_caml_read_float_calc
 	addi	$t2, $v0, -12  # newline?
-	beq	$t2, $r0, min_caml_read_int_calc
+	beq	$t2, $r0, min_caml_read_float_calc
 	addi	$t2, $v0, -45  # hyphen?
 	beq	$t2, $r0, min_caml_read_float_negative
 	addi	$t2, $v0, -46  # dot?
