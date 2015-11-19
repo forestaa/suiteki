@@ -318,6 +318,13 @@ parseInstruction i pc e dm
                                , "000100"
                                ]
                              ]
+    | head i == "neg.s"   = [ [ "010001"
+                              , "10000"
+                              , "00000"
+                              , addrF (i !! 2)
+                              , addrF (i !! 1)
+                              , "000111" ]
+                            ]
     | head i == "mov.s"   = [ [ "010001"
                               , "10000"
                               , "00000"
@@ -490,7 +497,7 @@ parseInstruction i pc e dm
 searchLabel :: String -> Environment -> DataMap -> Int
 searchLabel label e dm
   | isJust x = fst $ fromMaybe (error "searchLabel") x
-  | otherwise = fromMaybe (error "searchLabel") $ M.lookup label e
+  | otherwise = fromMaybe (error ("searchLabel: no such label found: " ++ show label)) $ M.lookup label e
   where
     x = lookup label dm
 
@@ -547,7 +554,7 @@ addr mnemonic = unwrapper $ M.lookup regName registerToAddress
   where
     regName = removeCommaIfAny mnemonic
     unwrapper (Just s) = s
-    unwrapper Nothing = "00000"
+    unwrapper Nothing = error ("no such register: " ++ regName)
 
 addrCC :: String -> String
 addrCC cc = binaryExp (read (removeCommaIfAny cc)) 3
