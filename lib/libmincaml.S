@@ -340,13 +340,7 @@ min_caml_sqrt:
 	sqrt.s	$f0, $f12
 	jr	$ra
 min_caml_floor:
-	li	$v0, 100
-	sw	$ra, 0($sp)
-	addi    $sp, $sp, -4
-	syscall
-	addi    $sp, $sp, 4
-	sw	$ra, 0($sp)
-	jr	$ra
+	j	min_caml_truncate
 min_caml_int_of_float:
 min_caml_truncate:
 	trunc.w.s	$f12, $f12
