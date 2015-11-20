@@ -135,104 +135,83 @@ min_caml_read_token_finish:
 	move	$v0, $s0
 	jr	$ra
 min_caml_read_int:
-min_caml_read_int_pass:
-	sw	$ra, 0($sp) # save link reg.
-	addi	$sp, $sp, -1
-	jal	min_caml_read_char
-	addi	$sp, $sp, 1 # back
-	lw	$ra, 0($sp) # load link reg.
-	addi	$t2, $v0, -32  # space?
-	beq	$t2, $r0, min_caml_read_int_pass
-	addi	$t2, $v0, -10  # newline?
-	beq	$t2, $r0, min_caml_read_int_pass
-	addi	$t2, $v0, -12  # newline?
-	beq	$t2, $r0, min_caml_read_int_pass
-min_caml_read_int_start:
-	li	$t0, 0 # 文字列のカウンタ
-	move	$t6, $hp # heap pointerの初期位置を覚えておく
-	li	$t7, 1 # $t7 = 0 if and only if the given integer-string repesents negative
-	addi	$t2, $v0, -45  # hyphen?
-	beq	$t2, $r0, min_caml_read_int_negative
-	sw	$v0, 0($hp)
-	addi	$hp, $hp, 1
-	addi	$t0, $t0, 1
-min_caml_read_int_read_input:
-	sw	$t0, 0($sp) # save counter
-	sw	$ra, -1($sp) # save link reg.
-	addi	$sp, $sp, -2
-	jal	min_caml_read_char
-	addi	$sp, $sp, 2 # back
-	lw	$ra, -1($sp) # load link reg.
-	lw	$t0, 0($sp)
-	addi	$t2, $v0, -32  # space?
-	beq	$t2, $r0, min_caml_read_int_calc
-	addi	$t2, $v0, -10  # newline?
-	beq	$t2, $r0, min_caml_read_int_calc
-	addi	$t2, $v0, -12  # newline?
-	beq	$t2, $r0, min_caml_read_int_calc
-	addi	$t2, $v0, -45  # hyphen?
-	beq	$t2, $r0, min_caml_read_int_negative
-	beq	$v0, $r0, min_caml_read_int_finalize # null char?
-	sw	$v0, 0($hp)
-	addi	$hp, $hp, 1
-	addi	$t0, $t0, 1
-	j	min_caml_read_int_read_input
-min_caml_read_int_negative:
-	li	$t7, 0
-	j	min_caml_read_int_read_input
-min_caml_read_int_calc:
-	# この時点で$t0には文字列の長さが入っている。
-	# また$t6+iにi (= 0, 1, ...) 文字目の文字が入っている。
-	move	$t2, $hp # 文字列を後ろからたどるためのポインタ
-	addi	$t6, $t6, -1 # ループ終了の判定に使う。
-	li	$t1, 1 # ループごとに10倍される値。
-	li	$v0, 0
-	# 文字を後ろから読んでいく。
-	addi	$t2, $t2, -1
-min_caml_read_int_for_loop:
-	beq	$t2, $t6, min_caml_read_int_finalize
-	# 1文字読む
-	lw	$t3, 0($t2)
-	addi	$t3, $t3, -48 # Char -> Int
-	# 「$t3 * (ループごとに10倍される値)」の計算
 	sw	$ra, 0($sp)
-	sw	$t0, -1($sp)
-	sw	$t1, -2($sp)
-	sw	$t2, -3($sp)
-	sw	$t3, -4($sp)
-	sw	$t7, -5($sp)
-	sw	$v0, -6($sp)
-	move	$a0, $t3
-	move	$a1, $t1
-	addi	$sp, $sp, -7
-	jal	mul
-	addi	$sp, $sp, 7
-	# $v0の更新
-	lw	$t8, -6($sp)
-	add	$t8, $t8, $v0
-	sw	$t8, -6($sp)
-	# $t1を10倍する
-	lw	$a0, -2($sp) # t1をロードしてa0に代入
-	li	$a1, 10
-	addi	$sp, $sp, -7
-	jal	mul
-	addi	$sp, $sp, 7
-	move	$t1, $v0 # t1を10倍された値で更新
-	# 値を$spから再取得
+	addi	$sp, $sp, -1
+	jal	min_caml_read_token
+	addi	$sp, $sp, 1
 	lw	$ra, 0($sp)
-	lw	$t0, -1($sp)
-	lw	$t2, -3($sp)
-	lw	$t3, -4($sp)
-	lw	$t7, -5($sp)
-	lw	$v0, -6($sp)
-	addi	$t2, $t2, -1
-	j	min_caml_read_int_for_loop
+# この時点で$v0に文字列の先頭のアドレスが、$v1にはその長さがある。
+# まず先頭文字が'-'かどうかを確認する。もし'-'なら負の数なので$v0をインクリメントして
+# $v1をデクリメントし、符号を表すレジスタを-1にする。
+	li	$s0, 1 # 符号を表すレジスタ
+	lw	$t0, 0($v0)
+	addi	$t2, $v0, -45  # hyphen?
+	beq	$t2, $r0, min_caml_read_int_negative
+	j	min_caml_read_int_cont
+min_caml_read_int_negative:
+	addi	$v0, $v0, 1
+	addi	$v1, $v1, -1
+	li	$s0, -1
+min_caml_read_int_cont:
+# あとは自然数だと思って読めばオーケー。
+	li	$t0, 1 # ループごとに10倍される数
+	li	$s1, 0 # 最終的には返り値となる数
+	addi	$s2, $v1, -1 # 文字列を後ろから読んでいくための変数(iと呼ぶ)
+# コードを読みやすくするためs3に文字列の先頭のアドレスを移動する
+# (v0だとreturn valueに衝突して色々面倒)
+	move	$s3, $v0
+min_caml_read_int_loop:
+	bltz	$s2, min_caml_read_int_finalize
+# まずstr[i]を取得する
+	add	$t8, $s3, $s2
+	lw	$t1, 0($t8)
+# str[i]を整数に変換する
+	addi	$t1, $t1, -48
+# t1 * t0を計算したい。ここでmulを使う。
+	move	$a0, $t0
+	move	$a1, $t1
+	sw	$ra, 0($sp)
+	sw	$s3, -1($sp) # 文字列の先頭のアドレス
+	sw	$t0, -2($sp) # ループごとに10倍される数
+	sw	$s0, -3($sp) # sign
+	sw	$s1, -4($sp) # return value
+	addi	$sp, $sp, -5
+	jal	mul
+	addi	$sp, $sp, 5
+	lw	$s1, -4($sp)
+	lw	$s0, -3($sp)
+	lw	$t0, -2($sp)
+	lw	$s3, -1($sp)
+	lw	$ra, 0($sp)
+# t1 * t0をresultに追加:
+	add	$s1, $s1, $v0
+# つぎにt0 * 10を計算する。
+	move	$a0, $t0
+	li	$a1, 10
+	sw	$ra, 0($sp)
+	sw	$s3, -1($sp)
+	sw	$t0, -2($sp)
+	sw	$s0, -3($sp)
+	sw	$s1, -4($sp)
+	addi	$sp, $sp, -5
+	jal	mul
+	addi	$sp, $sp, 5
+	lw	$s1, -4($sp)
+	lw	$s0, -3($sp)
+	lw	$t0, -2($sp)
+	lw	$s3, -1($sp)
+	lw	$ra, 0($sp)
+# t0を10倍した値で更新:
+	move	$t0, $v0
+	addi	$s2, $s2, -1 # i--
+	j	min_caml_read_int_loop
 min_caml_read_int_finalize:
-	beq	$t7, $r0, min_caml_read_int_negate
-	j	min_caml_read_int_finish
-min_caml_read_int_negate:
-	sub	$v0, $r0, $v0
-min_caml_read_int_finish:
+# s1に入っている値に符号の処理をしてv0に結果を入れて返すだけ。
+	bltz	$s0, min_caml_read_int_finalize_negative:
+	move	$v0, $s1
+	jr	$ra
+min_caml_read_int_finalize_negative:
+	sub	$v0, $zero, $s0
 	jr	$ra
 min_caml_read_float:
 min_caml_read_float_pass:
