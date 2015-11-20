@@ -368,22 +368,26 @@ min_caml_cos:
 	bc1t	0, cos_branch3
 	li	$t0, 1
 	mtc1	$t0, $f0
+	cvt.s.w	$f0, $f0
 	sub.s	$f12, $f12, $f4
 	j	calc
 cos_branch3:
 	li	$t0, -1
 	mtc1	$t0, $f0
+	cvt.s.w	$f0, $f0
 	sub.s	$f12, $f4, $f12
 	j	calc
 cos_branch2:
 	lwc1	$f4, 0(x1)
 	li	$t0, -1
 	mtc1	$t0, $f0
+	cvt.s.w	$f0, $f0
 	sub.s	$f12, $f12, $f4
 	j	calc
 cos_branch1:
 	li	$t0, 1
 	mtc1	$t0, $f0
+	cvt.s.w	$f0, $f0
 	sub.s	$f12, $f4, $f12
 	j	calc
 min_caml_sin:
