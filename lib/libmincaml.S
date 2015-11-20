@@ -403,21 +403,25 @@ min_caml_sin:
 	lwc1	$f4, 0(x4)
 	li	$t0, -1
 	mtc1	$t0, $f0
+	cvt.s.w	$f0, $f0
 	sub.s	$f12, $f4, $f12
 	j	calc
 sin_branch3:
 	li	$t0, -1
 	mtc1	$t0, $f0
+	cvt.s.w	$f0, $f0
 	sub.s	$f12, $f12, $f4
 	j	calc
 sin_branch2:
 	li	$t0, 1
 	mtc1	$t0, $f0
+	cvt.s.w	$f0, $f0
 	sub.s	$f12, $f4, $f12
 	j	calc
 sin_branch1:
 	li	$t0, 1
 	mtc1	$t0, $f0
+	cvt.s.w	$f0, $f0
 calc:
 	lwc1	$f16, 0(a1)
 	lwc1	$f17, 0(a2)
