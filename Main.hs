@@ -453,6 +453,14 @@ parseInstruction i pc e dm
                               , labelToAddr (i !! 2) pc e 16
                               ]
                             ]
+    | head i == "bc1f"    = [ [ "010001"
+                              , "01000"
+                              , addrCC (i !! 1)
+                              , "0"
+                              , "0"
+                              , labelToAddr (i !! 2) pc e 16
+                              ]
+                            ]
     | head i == "mfc1"    = [ [ "010001"
                               , "00000"
                               , addr (i !! 1)
