@@ -78,6 +78,7 @@ writeBinary a = do
     let dataMap = if noExternals a
                     then constructDataMap dataSection 65536 dataSection
                     else constructDataMap d 65536 d
+
     let dataList = parseDataMap dataMap
 
     let libTextSection = expandLabelInLWC1 (concat $ extractText ys) dataMap
@@ -92,7 +93,7 @@ writeBinary a = do
                    else parse textSection 0 labels dataMap
     let ep = [binaryExp (fromMaybe (error "couldn't locate entry point") (M.lookup "_min_caml_start" labels)) 32]
 
-    let machineCode = dataList ++ [[magicNumber]] ++ [ep] ++ parsed
+    let machineCode = concat dataList ++ [[magicNumber]] ++ [ep] ++ parsed
 
     B.writeFile (output a) (constructByteString . toString $ machineCode)
     setFileMode (output a) permission
@@ -132,7 +133,7 @@ constructByteString :: [String] -> B.ByteString
 constructByteString = foldr (B.append . convertBinaryStringToBinary) B.empty
 
 convertBinaryStringToBinary :: String -> B.ByteString
-convertBinaryStringToBinary bstr = runPut $ putWord32le w
+convertBinaryStringToBinary bstr = runPut $ putWord32be w
   where
     w = fromIntegral $ toDec bstr :: Word32
 
@@ -647,9 +648,11 @@ constructDataMap (l:_:xs) hp is
     val = map (\i -> binaryExp (read (i !! 1)) 32) vs  -- value = [".word", "11001100"] !! 1 = "11001100"
     k = length vs
 
-parseDataMap :: DataMap -> [[String]]
+parseDataMap :: DataMap -> [[[String]]]
 parseDataMap [] = []
-parseDataMap ((_, (_, val)):xs) = val : parseDataMap xs
+parseDataMap ((_, (_, val)):xs) = wrap val : parseDataMap xs
+  where
+    wrap = map (: [])
 
 -- Instructions without ".data" section
 extractText :: [[String]] -> [[[String]]]
