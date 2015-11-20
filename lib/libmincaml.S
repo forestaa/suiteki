@@ -211,7 +211,7 @@ min_caml_read_int_finalize:
 	move	$v0, $s1
 	jr	$ra
 min_caml_read_int_finalize_negative:
-	sub	$v0, $zero, $s0
+	sub	$v0, $zero, $s1
 	jr	$ra
 min_caml_str_has_point_p:
 # a0: the head address of a string
@@ -241,19 +241,22 @@ min_caml_str_with_no_point:
 # e.g., if the given string is "255.0", then the returned string is "2550"
 # note that this functions assumes that the given string contains '.'.
 	li	$t0, 0
-	addi	$t1, $a0, -2 # assuming that the str contains '.'
+	li	$t4, 0
+	addi	$t1, $a1, -1 # assuming that the str contains '.'
 	move	$v0, $hp
 min_caml_str_with_no_point_loop:
 	beq	$t0, $t1, min_caml_str_with_no_point_finalize
-	add	$t2, $a0, $t0
+	add	$t2, $a0, $t4
 	lw	$t2, 0($t2)
 	addi	$t3, $t2, -46  # dot?
 	beq	$t3, $r0, min_caml_str_with_no_point_ignore_dot
 	sw	$t2, 0($hp)
 	addi	$hp, $hp, 1
+	addi	$t0, $t0, 1
+	addi	$t4, $t4, 1
 	j	min_caml_str_with_no_point_loop
 min_caml_str_with_no_point_ignore_dot:
-	addi	$t0, $t0, 1
+	addi	$t4, $t4, 1
 	j	min_caml_str_with_no_point_loop
 min_caml_str_with_no_point_finalize:
 	jr	$ra
@@ -364,15 +367,15 @@ min_caml_read_float_point_exists:
 	lw	$ra, 0($sp)
 # これで$v0に浮動小数点の位置が入る。
 # つぎにs3を整数として読む。
-	addi	$v1, $s2, -1 # v1には文字列の長さを入れなければならない
-	move	$s1, $s0 # s1は符号
-	move	$v0, $s3 # v0は文字列の先頭のアドレス
 	sw	$ra, 0($sp)
 	sw	$v0, -1($sp)
 	sw	$s2, -2($sp)
 	addi	$sp, $sp, -3
+	addi	$v1, $s2, -1 # v1には文字列の長さを入れなければならない
+	move	$s1, $s0 # s1は符号
+	move	$v0, $s3 # v0は文字列の先頭のアドレス
 	jal	min_caml_read_int_cont
-	addi	$sp, $sp, 3
+	addi	$sp, $sp, 3 # 315
 	lw	$s2, -2($sp)
 	lw	$s1, -1($sp) # s1に浮動小数点数の位置を格納
 	lw	$ra, 0($sp)
