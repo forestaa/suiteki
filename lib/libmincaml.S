@@ -125,7 +125,7 @@ min_caml_read_token_loop:
 	beq	$t2, $r0, min_caml_read_token_l1
 	sw	$v0, 0($hp)
 	addi	$hp, $hp, 1
-	addi	$s0, 1
+	addi	$s0, $s0, 1
 	j	min_caml_read_token_loop
 min_caml_read_token_l1:
 	bne	$s0, $zero, min_caml_read_token_finish
@@ -207,13 +207,190 @@ min_caml_read_int_loop:
 	j	min_caml_read_int_loop
 min_caml_read_int_finalize:
 # s1に入っている値に符号の処理をしてv0に結果を入れて返すだけ。
-	bltz	$s0, min_caml_read_int_finalize_negative:
+	bltz	$s0, min_caml_read_int_finalize_negative
 	move	$v0, $s1
 	jr	$ra
 min_caml_read_int_finalize_negative:
 	sub	$v0, $zero, $s0
 	jr	$ra
+min_caml_str_has_point_p:
+# a0: the head address of a string
+# a1: the length of the string
+# return value: 1 if and only if the string contains '.', otherwise 0.
+	li	$t0, 0
+	addi	$t1, $a1, -1
+min_caml_str_has_point_p_loop:
+	beq	$t0, $t1, min_caml_str_has_point_p_false
+	add	$t2, $a0, $t0
+	lw	$t3, 0($t2)
+	addi	$t3, $t3, -46  # dot?
+	beq	$t3, $r0, min_caml_str_has_point_p_true
+	addi	$t0, $t0, 1
+	j	min_caml_str_has_point_p_loop
+min_caml_str_has_point_p_false:
+	li	$v0, 0
+	jr	$ra
+min_caml_str_has_point_p_true:
+	li	$v1, 1
+	jr	$ra
+min_caml_str_with_no_point:
+# a0: the head address of a string
+# a1: the length of the string
+# return value: the head address of a newly-created string. the new string is
+# the string constructed by eliminating all dots ('.') from the given string.
+# e.g., if the given string is "255.0", then the returned string is "2550"
+# note that this functions assumes that the given string contains '.'.
+	li	$t0, 0
+	addi	$t1, $a0, -2 # assuming that the str contains '.'
+	move	$v0, $hp
+min_caml_str_with_no_point_loop:
+	beq	$t0, $t1, min_caml_str_with_no_point_finalize
+	add	$t2, $a0, $t0
+	lw	$t2, 0($t2)
+	addi	$t3, $t2, -46  # dot?
+	beq	$t3, $r0, min_caml_str_with_no_point_ignore_dot
+	sw	$t2, 0($hp)
+	addi	$hp, $hp, 1
+	j	min_caml_str_with_no_point_loop
+min_caml_str_with_no_point_ignore_dot:
+	addi	$t0, $t0, 1
+	j	min_caml_str_with_no_point_loop
+min_caml_str_with_no_point_finalize:
+	jr	$ra
+min_caml_str_point_at:
+# a0: the head address of a string
+# a1: the length of the string
+# return value: the location of '.', counted from tail.
+# e.g., if input string is "255.0", then the result is 1. if input is "22.00", then 2.
+# note that this function assumes that the given string contains '.'.
+	li	$t0, 0 # counter
+min_caml_str_point_at_loop:
+	add	$t2, $a0, $t0
+	lw	$t2, 0($t2)
+	addi	$t3, $t2, -46  # dot?
+	beq	$t3, $r0, min_caml_str_point_at_found_dot
+	addi	$t0, $t0, 1
+	j	min_caml_str_point_at_loop
+min_caml_str_point_at_found_dot:
+	addi	$t0, $t0, 1
+	sub	$v0, $a1, $t0
+	jr	$ra
 min_caml_read_float:
+	sw	$ra, 0($sp)
+	addi	$sp, $sp, -1
+	jal	min_caml_read_token
+	addi	$sp, $sp, 1
+	lw	$ra, 0($sp)
+# この時点で$v0に文字列の先頭のアドレスが、$v1にはその長さがある。
+# まず先頭文字が'-'かどうかを確認する。もし'-'なら負の数なので$v0をインクリメントして
+# $v1をデクリメントし、符号を表すレジスタを-1にする。
+	li	$s0, 1 # 符号を表すレジスタ
+	lw	$t0, 0($v0)
+	addi	$t2, $v0, -45  # hyphen?
+	beq	$t2, $r0, min_caml_read_float_negative
+	j	min_caml_read_float_cont
+min_caml_read_float_negative:
+	addi	$v0, $v0, 1
+	addi	$v1, $v1, -1
+	li	$s0, -1
+min_caml_read_float_cont:
+# あとは正の浮動小数点数だと思って読むことができる。
+# 値がv0, v1にあるといろいろ面倒なのでs1, s2に移動しておく
+	move	$s1, $v0 # address
+	move	$s2, $v1 # length
+# まず小数点が存在するか否かをチェックする。存在しない場合はたとえば"1"を1.0にして返すことになる。
+	sw	$ra, 0($sp)
+	sw	$s0, -1($sp)
+	sw	$s1, -2($sp)
+	sw	$s2, -3($sp)
+	addi	$sp, $sp, -4
+	jal	min_caml_str_has_point_p
+	addi	$sp, $sp, 4
+	lw	$s2, -3($sp)
+	lw	$s1, -2($sp)
+	lw	$s0, -1($sp)
+	lw	$ra, 0($sp)
+	beq	$v0, $zero, min_caml_read_float_no_point
+	j	min_caml_read_float_point_exists
+min_caml_read_float_no_point:
+# 小数点が存在しない場合。これはread_intの処理が使える。
+# 'v0'に文字の先頭のアドレス、'v1'に文字列の長さ、's1'に符号を入れる。
+	move	$v0, $s1
+	move	$v1, $s2
+	move	$s1, $s0
+	sw	$ra, 0($sp)
+	addi	$sp, $sp, -1
+	jal	min_caml_read_int_cont
+	addi	$sp, $sp, 1
+	lw	$ra, 0($sp)
+# あとは読んだ結果を浮動小数点数に変換するだけ
+	mtc1	$v0, $f0
+	cvt.s.w	$f0, $f0
+	jr	$ra
+min_caml_read_float_point_exists:
+# 1. 浮動小数点を除いた文字列を構成する(sとする)
+# 3. 小数点が後ろから何文字目に存在するのかを調べる(k=(0,1,..)文字目とする)
+# 2. sを整数として読む(nとする)
+# 4. n/(10^k)を浮動小数点数として計算する
+	move	$a0, $s1
+	move	$a1, $s2
+	sw	$ra, 0($sp)
+	sw	$s0, -1($sp)
+	sw	$s1, -2($sp)
+	sw	$s2, -3($sp)
+	addi	$sp, $sp, -4
+	jal	min_caml_str_with_no_point
+	addi	$sp, $sp, 4
+	lw	$s2, -3($sp)
+	lw	$s1, -2($sp)
+	lw	$s0, -1($sp)
+	lw	$ra, 0($sp)
+# これで$v0に浮動小数点なしの文字列の先頭のアドレスが入る。
+# つぎに小数点の位置を調べる。
+	sw	$ra, 0($sp)
+	sw	$s0, -1($sp)
+	sw	$s1, -2($sp)
+	sw	$s2, -3($sp)
+	sw	$v0, -4($sp)
+	addi	$sp, $sp, -5
+	jal	min_caml_str_point_at
+	addi	$sp, $sp, 5
+	lw	$s3, -4($sp) # s3に浮動小数点なしの文字列の先頭を格納
+	lw	$s2, -3($sp)
+	lw	$s1, -2($sp)
+	lw	$s0, -1($sp)
+	lw	$ra, 0($sp)
+# これで$v0に浮動小数点の位置が入る。
+# つぎにs3を整数として読む。
+	addi	$v1, $s2, -1 # v1には文字列の長さを入れなければならない
+	move	$s1, $s0 # s1は符号
+	move	$v0, $s3 # v0は文字列の先頭のアドレス
+	sw	$ra, 0($sp)
+	sw	$v0, -1($sp)
+	sw	$s2, -2($sp)
+	addi	$sp, $sp, -3
+	jal	min_caml_read_int_cont
+	addi	$sp, $sp, 3
+	lw	$s2, -2($sp)
+	lw	$s1, -1($sp) # s1に浮動小数点数の位置を格納
+	lw	$ra, 0($sp)
+# つぎに整数として読んだs3を浮動小数点数に変換する
+	mtc1	$v0, $f0
+	cvt.s.w	$f0, $f0
+# 10*kでf0を割るために10*kを計算する。
+	move	$a0, $s1
+	li	$a1, 10
+	sw	$ra, 0($sp)
+	swc1	$f0, -1($sp)
+	jal	mul
+	lwc1	$f0, -1($sp)
+	lw	$ra, 0($sp)
+# 10*kを浮動小数点数に変換する。
+	mtc1	$v0, $f1
+	cvt.s.w	$f1, $f1
+# あとは割るだけ
+	div.s	$f0, $f0, $f1
+	jr	$ra
 min_caml_read_float_pass:
 	sw	$ra, 0($sp) # save link reg.
 	addi	$sp, $sp, -1
