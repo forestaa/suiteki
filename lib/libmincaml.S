@@ -98,6 +98,38 @@ min_caml_read_char:
 	addi    $sp, $sp, 4
 	lw	$ra, 0($sp)
 	jr	$ra
+min_caml_read_token:
+# call read_char repeatedly until the newly read char is not a space-char (that is,
+# ' ' or '\t' or '\r' or '\n'), storing them in heap, and return the head address of
+# the stored characters.
+	li	$s0, -1
+	li	$s1, 1
+	move	$t0, $hp
+min_caml_read_token_loop:
+	sw	$ra, 0($sp)
+	sw	$t0, -1($sp)
+	addi	$sp, $sp, -2
+	jal	min_caml_read_char
+	addi	$sp, $sp, 2
+	lw	$ra, 0($sp)
+	lw	$t0, -1($sp)
+	addi	$t2, $v0, -32  # space?
+	beq	$t2, $r0, min_caml_read_token_l1
+	addi	$t2, $v0, -10  # newline?
+	beq	$t2, $r0, min_caml_read_token_l1
+	addi	$t2, $v0, -11  # tab?
+	beq	$t2, $r0, min_caml_read_token_l1
+	addi	$t2, $v0, -12  # newline?
+	beq	$t2, $r0, min_caml_read_token_l1
+	sw	$v0, 0($hp)
+	addi	$hp, $hp, 1
+	li	$s0, 1
+	j	min_caml_read_token_loop
+min_caml_read_token_l1:
+	beq	$s0, $s1, min_caml_read_token_finish
+	j	min_caml_read_token_loop
+min_caml_read_token_finish:
+	jr	$ra
 min_caml_read_int:
 min_caml_read_int_pass:
 	sw	$ra, 0($sp) # save link reg.
