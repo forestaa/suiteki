@@ -350,7 +350,7 @@ min_caml_floor:
 min_caml_int_of_float:
 min_caml_truncate:
 	trunc.w.s	$f12, $f12
-	mfc1	$v0, $f1
+	mfc1	$v0, $f12
 	jr	$ra
 min_caml_float_of_int:
 	mtc1	$a0, $f0
