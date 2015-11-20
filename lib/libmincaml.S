@@ -132,7 +132,7 @@ min_caml_read_token_l1:
 	j	min_caml_read_token_loop
 min_caml_read_token_finish:
 	move	$v0, $t0
-	move	$v0, $s0
+	move	$v1, $s0
 	jr	$ra
 min_caml_read_int:
 	sw	$ra, 0($sp)
