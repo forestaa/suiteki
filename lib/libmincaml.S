@@ -102,17 +102,19 @@ min_caml_read_token:
 # call read_char repeatedly until the newly read char is not a space-char (that is,
 # ' ' or '\t' or '\r' or '\n'), storing them in heap, and return the head address of
 # the stored characters.
-	li	$s0, -1
-	li	$s1, 1
+# also, return the length of the string using $v1.
+	li	$s0, 0
 	move	$t0, $hp
 min_caml_read_token_loop:
 	sw	$ra, 0($sp)
 	sw	$t0, -1($sp)
-	addi	$sp, $sp, -2
+	sw	$s0, -2($sp)
+	addi	$sp, $sp, -3
 	jal	min_caml_read_char
-	addi	$sp, $sp, 2
-	lw	$ra, 0($sp)
+	addi	$sp, $sp, 3
+	lw	$s0, -2($sp)
 	lw	$t0, -1($sp)
+	lw	$ra, 0($sp)
 	addi	$t2, $v0, -32  # space?
 	beq	$t2, $r0, min_caml_read_token_l1
 	addi	$t2, $v0, -10  # newline?
@@ -123,12 +125,14 @@ min_caml_read_token_loop:
 	beq	$t2, $r0, min_caml_read_token_l1
 	sw	$v0, 0($hp)
 	addi	$hp, $hp, 1
-	li	$s0, 1
+	addi	$s0, 1
 	j	min_caml_read_token_loop
 min_caml_read_token_l1:
-	beq	$s0, $s1, min_caml_read_token_finish
+	bne	$s0, $zero, min_caml_read_token_finish
 	j	min_caml_read_token_loop
 min_caml_read_token_finish:
+	move	$v0, $t0
+	move	$v0, $s0
 	jr	$ra
 min_caml_read_int:
 min_caml_read_int_pass:
