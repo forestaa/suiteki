@@ -133,7 +133,7 @@ constructByteString :: [String] -> B.ByteString
 constructByteString = foldr (B.append . convertBinaryStringToBinary) B.empty
 
 convertBinaryStringToBinary :: String -> B.ByteString
-convertBinaryStringToBinary bstr = runPut $ putWord32be w
+convertBinaryStringToBinary bstr = runPut $ putWord32le w
   where
     w = fromIntegral $ toDec bstr :: Word32
 
