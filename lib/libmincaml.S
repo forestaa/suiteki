@@ -123,6 +123,8 @@ min_caml_read_token_loop:
 	beq	$t2, $r0, min_caml_read_token_l1
 	addi	$t2, $v0, -12  # newline?
 	beq	$t2, $r0, min_caml_read_token_l1
+	addi	$t2, $v0, -13  # newline?
+	beq	$t2, $r0, min_caml_read_token_l1
 	sw	$v0, 0($hp)
 	addi	$hp, $hp, 1
 	addi	$s0, $s0, 1
