@@ -231,7 +231,7 @@ min_caml_str_has_point_p_false:
 	li	$v0, 0
 	jr	$ra
 min_caml_str_has_point_p_true:
-	li	$v1, 1
+	li	$v0, 1
 	jr	$ra
 min_caml_str_with_no_point:
 # a0: the head address of a string
@@ -299,6 +299,8 @@ min_caml_read_float_cont:
 	move	$s1, $v0 # address
 	move	$s2, $v1 # length
 # まず小数点が存在するか否かをチェックする。存在しない場合はたとえば"1"を1.0にして返すことになる。
+	move	$a0, $s1
+	move	$a1, $s2
 	sw	$ra, 0($sp)
 	sw	$s0, -1($sp)
 	sw	$s1, -2($sp)
