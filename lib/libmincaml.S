@@ -145,7 +145,7 @@ min_caml_read_int:
 # $v1をデクリメントし、符号を表すレジスタを-1にする。
 	li	$s0, 1 # 符号を表すレジスタ
 	lw	$t0, 0($v0)
-	addi	$t2, $v0, -45  # hyphen?
+	addi	$t2, $t0, -45  # hyphen?
 	beq	$t2, $r0, min_caml_read_int_negative
 	j	min_caml_read_int_cont
 min_caml_read_int_negative:
