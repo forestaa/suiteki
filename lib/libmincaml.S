@@ -15,9 +15,9 @@ min_caml_print_int_minus:
 	sw	$a0, 0($sp)
 	li	$a0, 45
 	sw	$ra, -1($sp)
-	addi    $sp, $sp, -1
+	addi    $sp, $sp, -2
 	jal	min_caml_print_byte
-	addi    $sp, $sp, 1
+	addi    $sp, $sp, 2
 	lw	$ra, -1($sp)
 	lw	$a0, 0($sp)
 	li	$t0, 0
