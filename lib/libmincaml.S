@@ -2,9 +2,9 @@
 min_caml_print_newline:
 	li	$a0, 10
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, -4
+	addi    $sp, $sp, -1
 	jal	min_caml_print_byte
-	addi    $sp, $sp, 4
+	addi    $sp, $sp, 1
 	lw	$ra, 0($sp)
 	jr	$ra
 min_caml_print_int:
@@ -15,87 +15,87 @@ min_caml_print_int_minus:
 	sw	$a0, 0($sp)
 	li	$a0, 45
 	sw	$ra, -1($sp)
-	addi    $sp, $sp, -4
+	addi    $sp, $sp, -1
 	jal	min_caml_print_byte
-	addi    $sp, $sp, 4
+	addi    $sp, $sp, 1
 	lw	$ra, -1($sp)
 	lw	$a0, 0($sp)
 	li	$t0, 0
 	sub	$a0, $t0, $a0 # negate a0
 min_caml_print_int_cont:
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, -4
+	addi    $sp, $sp, -1
 	jal	div10
 # この時点でv0が商、v1があまり。
-	addi    $sp, $sp, 4
+	addi    $sp, $sp, 1
 	lw	$ra, 0($sp)
 	bgtz	$v0, min_caml_print_int_rec
 	j	min_caml_print_int_final
 min_caml_print_int_rec:
 	sw	$ra, 0($sp)
-	sw	$v1, -4($sp)
+	sw	$v1, -1($sp)
 	move	$a0, $v0
-	addi    $sp, $sp, -8
+	addi    $sp, $sp, -2
 	jal	min_caml_print_int_cont
-	addi    $sp, $sp, 8
+	addi    $sp, $sp, 2
 	lw	$ra, 0($sp)
-	lw	$v1, -4($sp)
+	lw	$v1, -1($sp)
 min_caml_print_int_final:
 	addi	$a0, $v1, 48
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, -4
+	addi    $sp, $sp, -1
 	jal	min_caml_print_byte
-	addi    $sp, $sp, 4
+	addi    $sp, $sp, 1
 	lw	$ra, 0($sp)
 	jr	$ra
 min_caml_print_byte:
 	li	$v0, 11
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, -4
+	addi    $sp, $sp, -1
 	syscall
-	addi    $sp, $sp, 4
+	addi    $sp, $sp, 1
 	sw	$ra, 0($sp)
 	jr	$ra
 min_caml_prerr_int:
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, -4
+	addi    $sp, $sp, -1
 	jal	div10
-	addi    $sp, $sp, 4
+	addi    $sp, $sp, 1
 	lw	$ra, 0($sp)
 	bgtz	$v0, min_caml_prerr_int_rec
 	j	min_caml_prerr_int_final
 min_caml_prerr_int_rec:
 	sw	$ra, 0($sp)
-	sw	$v1, -4($sp)
+	sw	$v1, -1($sp)
 	move	$a0, $v0
-	addi    $sp, $sp, -8
+	addi    $sp, $sp, -2
 	jal	min_caml_prerr_int
-	addi    $sp, $sp, 8
+	addi    $sp, $sp, 2
 	lw	$ra, 0($sp)
-	lw	$v1, -4($sp)
+	lw	$v1, -1($sp)
 min_caml_prerr_int_final:
 	addi	$a0, $v1, 48
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, -4
+	addi    $sp, $sp, -1
 	jal	min_caml_prerr_byte
-	addi    $sp, $sp, 4
+	addi    $sp, $sp, 1
 	lw	$ra, 0($sp)
 	jr	$ra
 min_caml_prerr_byte:
 	li	$v0, 103
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, -4
+	addi    $sp, $sp, -1
 	syscall
-	addi    $sp, $sp, 4
+	addi    $sp, $sp, 1
 	sw	$ra, 0($sp)
 	jr	$ra
 min_caml_prerr_float:
 min_caml_read_char:
 	li	$v0, 12
 	sw	$ra, 0($sp)
-	addi    $sp, $sp, -4
+	addi    $sp, $sp, -1
 	syscall
-	addi    $sp, $sp, 4
+	addi    $sp, $sp, 1
 	lw	$ra, 0($sp)
 	jr	$ra
 min_caml_read_token:
@@ -593,14 +593,14 @@ div10_calc_if:
 div10_return:
 	move	$a0, $t2
 	li	$a1, 10
-	sw	$t2, -4($sp)
-	sw	$ra, -8($sp)
-	addi	$sp, $sp, -12
+	sw	$t2, -1($sp)
+	sw	$ra, -2($sp)
+	addi	$sp, $sp, -3
 	jal	mul
 	sub	$v1, $t8, $v0
-	addi	$sp, $sp, 12
-	lw	$ra, -8($sp)
-	lw	$v0, -4($sp)
+	addi	$sp, $sp, 3
+	lw	$ra, -2($sp)
+	lw	$v0, -1($sp)
 	jr	$ra
 	.data
 min_caml_objects:
