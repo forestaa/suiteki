@@ -475,7 +475,7 @@ calc:
 	add.s	$f19, $f19, $f16
 	mul.s	$f19, $f19, $f12
 	mul.s	$f0, $f19, $f0
-	jr	$r31
+	jr	$ra
 sin_v0:
 	j	calc
 sin_v1:
@@ -494,7 +494,7 @@ sin_v2:
 	mtc1	$t0, $f2
 	cvt.s.w	$f2, $f2
 	mul.s	$f0, $f0, $f12
-	jr	$r31
+	jr	$ra
 sin_v3:
 	lwc1	$f4, 0(x4)
 	sub.s	$f12, $f4, $f12
@@ -507,7 +507,7 @@ sin_v3:
 	mtc1	$t0, $f2
 	cvt.s.w	$f2, $f2
 	mul.s	$f0, $f0, $f12
-	jr	$r31
+	jr	$ra
 mysin_pos:
 # f12: x (float)
 # return value: the n that satisfies (pi / 2) * n <= x < (pi / 2) * (n + 1).
