@@ -551,12 +551,13 @@ category_finalize:
 	beq	$s2, $r0, sin_v2
 	j	sin_v3
 mysin_neg:
+# add 2*pi to x again and again until x >= 0 holds.
 	lwc1	$f11, 0(pi2)
 	mtc1	$zero, $f13
 mysin_neg_loop:
 	c.olt.s	0, $f13, $f12
 	bc1t	0, mysin_pos
-	add.s	$f12, $f12, $f11
+	add.s	$f12, $f12, $f11 # x += 2*pi
 	j	mysin_neg_loop
 min_caml_sin:
 	mtc1	$zero, $f13
