@@ -462,114 +462,6 @@ min_caml_float_of_int:
 	mtc1	$a0, $f0
 	cvt.s.w	$f0, $f0
 	jr	$ra
-category:
-# a0: x
-# return value: the n that satisfies (pi / 2) * n <= x < (pi / 2) * (n + 1).
-# note: assuming x >= 0
-	li	$s0, 0
-	lwc1	$t1, 0(pidiv2)
-category_loop:
-	addi	$t0, $s0, 1
-	sw	$ra, 0($sp)
-	sw	$s0, -1($sp)
-	sw	$t1, -2($sp)
-	sw	$a0, -3($sp)
-	move	$a0, $t0
-	move	$a1, $t1
-	addi	$sp, $sp, -4
-	jal	mul
-	addi	$sp, $sp, 4
-	lw	$a0, -3($sp)
-	lw	$t1, -2($sp)
-	lw	$s0, -1($sp)
-	lw	$ra, 0($sp)
-	sub	$t0, $a0, $v0
-	bltz	$t0, category_finalize
-	addi	$s0, $s0, 1
-	j	category_loop
-category_finalize:
-	move	$v0, $s0
-	jr	$ra
-min_caml_cos:
-	li	$v0, -2
-	sw	$ra, 0($sp)
-	addi    $sp, $sp, -1
-	syscall
-	addi    $sp, $sp, 1
-	sw	$ra, 0($sp)
-	jr	$ra
-	lwc1	$f4, 0(x1)
-	c.olt.s	0, $f12, $f4
-	bc1t	0, cos_branch1
-	lwc1	$f4, 0(x2)
-	c.olt.s	0, $f12, $f4
-	bc1t	0, cos_branch2
-	lwc1	$f4, 0(x3)
-	c.olt.s	0, $f12, $f4
-	bc1t	0, cos_branch3
-	li	$t0, 1
-	mtc1	$t0, $f0
-	cvt.s.w	$f0, $f0
-	sub.s	$f12, $f12, $f4
-	j	calc
-cos_branch3:
-	li	$t0, -1
-	mtc1	$t0, $f0
-	cvt.s.w	$f0, $f0
-	sub.s	$f12, $f4, $f12
-	j	calc
-cos_branch2:
-	lwc1	$f4, 0(x1)
-	li	$t0, -1
-	mtc1	$t0, $f0
-	cvt.s.w	$f0, $f0
-	sub.s	$f12, $f12, $f4
-	j	calc
-cos_branch1:
-	li	$t0, 1
-	mtc1	$t0, $f0
-	cvt.s.w	$f0, $f0
-	sub.s	$f12, $f4, $f12
-	j	calc
-min_caml_sin:
-	li	$v0, -1
-	sw	$ra, 0($sp)
-	addi    $sp, $sp, -1
-	syscall
-	addi    $sp, $sp, 1
-	sw	$ra, 0($sp)
-	jr	$ra
-	lwc1	$f4, 0(x1)
-	c.olt.s	0, $f12, $f4
-	bc1t	0, sin_branch1
-	lwc1	$f4, 0(x2)
-	c.olt.s	0, $f12, $f4
-	bc1t	0, sin_branch2
-	lwc1	$f4, 0(x3)
-	c.olt.s	0, $f12, $f4
-	bc1t	0, sin_branch3
-	lwc1	$f4, 0(x4)
-	li	$t0, -1
-	mtc1	$t0, $f0
-	cvt.s.w	$f0, $f0
-	sub.s	$f12, $f4, $f12
-	j	calc
-sin_branch3:
-	li	$t0, -1
-	mtc1	$t0, $f0
-	cvt.s.w	$f0, $f0
-	sub.s	$f12, $f12, $f4
-	j	calc
-sin_branch2:
-	li	$t0, 1
-	mtc1	$t0, $f0
-	cvt.s.w	$f0, $f0
-	sub.s	$f12, $f4, $f12
-	j	calc
-sin_branch1:
-	li	$t0, 1
-	mtc1	$t0, $f0
-	cvt.s.w	$f0, $f0
 calc:
 	lwc1	$f16, 0(a1)
 	lwc1	$f17, 0(a2)
@@ -584,6 +476,191 @@ calc:
 	mul.s	$f19, $f19, $f12
 	mul.s	$f0, $f19, $f0
 	jr	$r31
+sin_v0:
+	j	calc
+sin_v1:
+	lwc1	$f4, 0(x2)
+	sub.s	$f12, $f4, $f12
+	j	calc
+sin_v2:
+	lwc1	$f4, 0(x2)
+	sub.s	$f12, $f12, $f4
+	sw	$ra, 0($sp)
+	addi	$sp, $sp, -1
+	jal	calc
+	addi	$sp, $sp, 1
+	lw	$ra, 0($sp)
+	li	$t0, -1
+	mtc1	$t0, $f2
+	cvt.s.w	$f2, $f2
+	mul.s	$f0, $f0, $f12
+	jr	$r31
+sin_v3:
+	lwc1	$f4, 0(x4)
+	sub.s	$f12, $f4, $f12
+	sw	$ra, 0($sp)
+	addi	$sp, $sp, -1
+	jal	calc
+	addi	$sp, $sp, 1
+	lw	$ra, 0($sp)
+	li	$t0, -1
+	mtc1	$t0, $f2
+	cvt.s.w	$f2, $f2
+	mul.s	$f0, $f0, $f12
+	jr	$r31
+mysin_pos:
+# f12: x (float)
+# return value: the n that satisfies (pi / 2) * n <= x < (pi / 2) * (n + 1).
+# note: assuming x >= 0
+	li	$s0, 0
+	li	$s1, 0 # n / 4 (as integer)
+	li	$s2, 0 # n % 4
+	li	$t1, 0 # counter for s1
+	li	$t2, 4 # for comparison
+	lwc1	$f9, 0(pidiv2)
+category_loop:
+	addi	$t0, $s0, 1
+	mtc1	$t0, $f10
+	cvt.s.w	$f10, $f10
+	mul.s	$f10, $f10, $f9
+	c.olt.s	0, $f12, $f10
+	bc1t	0, category_finalize
+	addi	$s0, $s0, 1
+	addi	$s2, $s2, 1
+	addi	$t1, $t1, 1
+	beq	$t1, $t2, category_4
+	j	category_loop
+category_4:
+	li	$t1, 0
+	li	$s2, 0
+	addi	$s1, $s1, 1
+	j	category_loop
+category_finalize:
+	move	$v0, $s0
+# x -= (2 * pi) * m
+	mtc1	$s1, $f10
+	cvt.s.w	$f10, $f10
+	lwc1	$f11, 0(pi2)
+	mul.s	$f11, $f10, $f11
+	sub.s	$f12, $f12, $f11
+# switch by n % 4
+	addi	$t0, $s2, 0
+	beq	$s2, $r0, sin_v0
+	addi	$t0, $s2, -1
+	beq	$s2, $r0, sin_v1
+	addi	$t0, $s2, -2
+	beq	$s2, $r0, sin_v2
+	j	sin_v3
+mysin_neg:
+	lwc1	$f11, 0(pi2)
+	mtc1	$zero, $f13
+mysin_neg_loop:
+	c.olt.s	0, $f13, $f12
+	bc1t	0, mysin_pos
+	add.s	$f12, $f12, $f11
+	j	mysin_neg_loop
+min_caml_sin:
+	mtc1	$zero, $f13
+	c.olt.s	0, $f12, $f13
+	bc1t	0, mysin_neg
+	j	mysin_pos
+min_caml_cos:
+	lwc1	$f13, 0(pidiv2)
+	add.s	$f12, $f12, $f13
+	j	min_caml_sin
+#	li	$v0, -2
+#	sw	$ra, 0($sp)
+#	addi    $sp, $sp, -1
+#	syscall
+#	addi    $sp, $sp, 1
+#	sw	$ra, 0($sp)
+#	jr	$ra
+#	lwc1	$f4, 0(x1)
+#	c.olt.s	0, $f12, $f4
+#	bc1t	0, cos_branch1
+#	lwc1	$f4, 0(x2)
+#	c.olt.s	0, $f12, $f4
+#	bc1t	0, cos_branch2
+#	lwc1	$f4, 0(x3)
+#	c.olt.s	0, $f12, $f4
+#	bc1t	0, cos_branch3
+#	li	$t0, 1
+#	mtc1	$t0, $f0
+#	cvt.s.w	$f0, $f0
+#	sub.s	$f12, $f12, $f4
+#	j	calc
+#cos_branch3:
+#	li	$t0, -1
+#	mtc1	$t0, $f0
+#	cvt.s.w	$f0, $f0
+#	sub.s	$f12, $f4, $f12
+#	j	calc
+#cos_branch2:
+#	lwc1	$f4, 0(x1)
+#	li	$t0, -1
+#	mtc1	$t0, $f0
+#	cvt.s.w	$f0, $f0
+#	sub.s	$f12, $f12, $f4
+#	j	calc
+#cos_branch1:
+#	li	$t0, 1
+#	mtc1	$t0, $f0
+#	cvt.s.w	$f0, $f0
+#	sub.s	$f12, $f4, $f12
+#	j	calc
+# min_caml_sin:
+# 	li	$v0, -1
+# 	sw	$ra, 0($sp)
+# 	addi    $sp, $sp, -1
+# 	syscall
+# 	addi    $sp, $sp, 1
+# 	sw	$ra, 0($sp)
+# 	jr	$ra
+# 	lwc1	$f4, 0(x1)
+# 	c.olt.s	0, $f12, $f4
+# 	bc1t	0, sin_branch1
+# 	lwc1	$f4, 0(x2)
+# 	c.olt.s	0, $f12, $f4
+# 	bc1t	0, sin_branch2
+# 	lwc1	$f4, 0(x3)
+# 	c.olt.s	0, $f12, $f4
+# 	bc1t	0, sin_branch3
+# 	lwc1	$f4, 0(x4)
+# 	li	$t0, -1
+# 	mtc1	$t0, $f0
+# 	cvt.s.w	$f0, $f0
+# 	sub.s	$f12, $f4, $f12
+# 	j	calc
+# sin_branch3:
+# 	li	$t0, -1
+# 	mtc1	$t0, $f0
+# 	cvt.s.w	$f0, $f0
+# 	sub.s	$f12, $f12, $f4
+# 	j	calc
+# sin_branch2:
+# 	li	$t0, 1
+# 	mtc1	$t0, $f0
+# 	cvt.s.w	$f0, $f0
+# 	sub.s	$f12, $f4, $f12
+# 	j	calc
+# sin_branch1:
+# 	li	$t0, 1
+# 	mtc1	$t0, $f0
+# 	cvt.s.w	$f0, $f0
+# calc:
+# 	lwc1	$f16, 0(a1)
+# 	lwc1	$f17, 0(a2)
+# 	lwc1	$f18, 0(a3)
+# 	lwc1	$f19, 0(a4)
+# 	mul.s	$f19, $f19, $f12
+# 	add.s	$f19, $f19, $f18
+# 	mul.s   $f19, $f19, $f12
+# 	add.s	$f19, $f19, $f17
+# 	mul.s	$f19, $f19, $f12
+# 	add.s	$f19, $f19, $f16
+# 	mul.s	$f19, $f19, $f12
+# 	mul.s	$f0, $f19, $f0
+# 	jr	$r31
 min_caml_atan:
 	li	$v0, -3
 	sw	$ra, 0($sp)
@@ -937,6 +1014,8 @@ b1:
 	.word	1065411936
 pi:
 	.word	1078530011 # 3.1415927
+pi2:
+	.word	1086918619 # pi * 2
 pidiv2:
 	.word	1070141403 # pi / 2
 pivot:
