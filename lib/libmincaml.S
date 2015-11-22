@@ -117,6 +117,8 @@ min_caml_read_token_loop:
 	lw	$ra, 0($sp)
 	addi	$t2, $v0, -32  # space?
 	beq	$t2, $r0, min_caml_read_token_l1
+	addi	$t2, $v0, -9  # tab?
+	beq	$t2, $r0, min_caml_read_token_l1
 	addi	$t2, $v0, -10  # newline?
 	beq	$t2, $r0, min_caml_read_token_l1
 	addi	$t2, $v0, -11  # tab?
@@ -431,7 +433,20 @@ min_caml_sqrt:
 	sqrt.s	$f0, $f12
 	jr	$ra
 min_caml_floor:
-	j	min_caml_truncate
+	trunc.w.s	$f12, $f12
+	cvt.s.w	$f0, $f12
+	li	$t0, 0
+	mtc1	$t0, $f3
+	cvt.s.w	$f3, $f3
+	c.olt.s	0, $f0, $f3 # if $f12 < 0
+	bc1t	0, min_caml_floor_neg
+	jr	$ra
+min_caml_floor_neg:
+	li	$t0, 1
+	mtc1	$t0, $f3
+	cvt.s.w	$f3, $f3
+	sub.s	$f0, $f0, $f3
+	jr	$ra
 min_caml_int_of_float:
 min_caml_truncate:
 	trunc.w.s	$f12, $f12
@@ -441,7 +456,42 @@ min_caml_float_of_int:
 	mtc1	$a0, $f0
 	cvt.s.w	$f0, $f0
 	jr	$ra
+category:
+# a0: x
+# return value: the n that satisfies (pi / 2) * n <= x < (pi / 2) * (n + 1).
+# note: assuming x >= 0
+	li	$s0, 0
+	lwc1	$t1, 0(pidiv2)
+category_loop:
+	addi	$t0, $s0, 1
+	sw	$ra, 0($sp)
+	sw	$s0, -1($sp)
+	sw	$t1, -2($sp)
+	sw	$a0, -3($sp)
+	move	$a0, $t0
+	move	$a1, $t1
+	addi	$sp, $sp, -4
+	jal	mul
+	addi	$sp, $sp, 4
+	lw	$a0, -3($sp)
+	lw	$t1, -2($sp)
+	lw	$s0, -1($sp)
+	lw	$ra, 0($sp)
+	sub	$t0, $a0, $v0
+	bltz	$t0, category_finalize
+	addi	$s0, $s0, 1
+	j	category_loop
+category_finalize:
+	move	$v0, $s0
+	jr	$ra
 min_caml_cos:
+	li	$v0, -2
+	sw	$ra, 0($sp)
+	addi    $sp, $sp, -1
+	syscall
+	addi    $sp, $sp, 1
+	sw	$ra, 0($sp)
+	jr	$ra
 	lwc1	$f4, 0(x1)
 	c.olt.s	0, $f12, $f4
 	bc1t	0, cos_branch1
@@ -476,6 +526,13 @@ cos_branch1:
 	sub.s	$f12, $f4, $f12
 	j	calc
 min_caml_sin:
+	li	$v0, -1
+	sw	$ra, 0($sp)
+	addi    $sp, $sp, -1
+	syscall
+	addi    $sp, $sp, 1
+	sw	$ra, 0($sp)
+	jr	$ra
 	lwc1	$f4, 0(x1)
 	c.olt.s	0, $f12, $f4
 	bc1t	0, sin_branch1
@@ -522,6 +579,13 @@ calc:
 	mul.s	$f0, $f19, $f0
 	jr	$r31
 min_caml_atan:
+	li	$v0, -3
+	sw	$ra, 0($sp)
+	addi    $sp, $sp, -1
+	syscall
+	addi    $sp, $sp, 1
+	sw	$ra, 0($sp)
+	jr	$ra
 	lwc1	$f16, 0(b1)
 	lwc1	$f17, 0(b2)
 	lwc1	$f18, 0(b3)
@@ -666,6 +730,7 @@ min_caml_objects:
 	.word	0
 	.word	0
 min_caml_size: # address of array
+	.word	128
 	.word	128
 min_caml_dbg:
 	.word	1
@@ -864,3 +929,7 @@ b2:
 	.word	3179091843
 b1:
 	.word	1065411936
+pi:
+	.word	1078530011 # 3.1415927
+pidiv2:
+	.word	1070141403 # pi / 2
