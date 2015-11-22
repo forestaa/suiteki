@@ -425,6 +425,7 @@ min_caml_abs_float:
 	mtc1	$t0, $f3
 	c.olt.s	0, $f12, $f3
 	bc1t	0, min_caml_abs_negate
+	mov.s	$f0, $f12
 	jr	$ra
 min_caml_abs_negate:
 	neg.s	$f0, $f12
@@ -438,7 +439,7 @@ min_caml_floor:
 	li	$t0, 0
 	mtc1	$t0, $f3
 	cvt.s.w	$f3, $f3
-	c.olt.s	0, $f0, $f3 # if $f12 < 0
+	c.olt.s	0, $f0, $f3 # if $f0 < 0
 	bc1t	0, min_caml_floor_neg
 	jr	$ra
 min_caml_floor_neg:
@@ -448,6 +449,11 @@ min_caml_floor_neg:
 	sub.s	$f0, $f0, $f3
 	jr	$ra
 min_caml_int_of_float:
+#	trunc.w.s	$f3, $f12
+#	cvt.s.w	$f3, $f3
+#	sub.s	$f4, $f12, $f3
+# min_caml_int_of_float_pos:
+# min_caml_int_of_float_neg:
 min_caml_truncate:
 	trunc.w.s	$f12, $f12
 	mfc1	$v0, $f12
@@ -933,3 +939,5 @@ pi:
 	.word	1078530011 # 3.1415927
 pidiv2:
 	.word	1070141403 # pi / 2
+pivot:
+	.word	1056964608 # 0.5
