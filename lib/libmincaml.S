@@ -510,7 +510,6 @@ sin_v3:
 	jr	$ra
 mysin_pos:
 # f12: x (float)
-# return value: the n that satisfies (pi / 2) * n <= x < (pi / 2) * (n + 1).
 # note: assuming x >= 0
 	li	$s0, 0
 	li	$s1, 0 # n / 4 (as integer)
