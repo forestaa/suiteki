@@ -463,18 +463,28 @@ min_caml_float_of_int:
 	cvt.s.w	$f0, $f0
 	jr	$ra
 calc:
-	lwc1	$f16, 0(a1)
-	lwc1	$f17, 0(a2)
-	lwc1	$f18, 0(a3)
-	lwc1	$f19, 0(a4)
-	mul.s	$f19, $f19, $f12
-	add.s	$f19, $f19, $f18
-	mul.s   $f19, $f19, $f12
-	add.s	$f19, $f19, $f17
-	mul.s	$f19, $f19, $f12
-	add.s	$f19, $f19, $f16
-	mul.s	$f19, $f19, $f12
-	mul.s	$f0, $f19, $f0
+	lwc1	$f16, 0(s01)
+	lwc1	$f17, 0(s03)
+	lwc1	$f18, 0(s05)
+	lwc1	$f19, 0(s07)
+	lwc1	$f20, 0(s09)
+	lwc1	$f21, 0(s11)
+	mul.s	$f21, $f21, $f12
+	mul.s	$f21, $f21, $f12
+	add.s	$f21, $f21, $f20
+	mul.s	$f21, $f21, $f12
+	mul.s	$f21, $f21, $f12
+	add.s	$f21, $f21, $f19
+	mul.s	$f21, $f21, $f12
+	mul.s	$f21, $f21, $f12
+	add.s	$f21, $f21, $f18
+	mul.s	$f21, $f21, $f12
+	mul.s	$f21, $f21, $f12
+	add.s	$f21, $f21, $f17
+	mul.s	$f21, $f21, $f12
+	mul.s	$f21, $f21, $f12
+	add.s	$f21, $f21, $f16
+	mul.s	$f0, $f21, $f12
 	jr	$ra
 sin_v0:
 	j	calc
@@ -555,7 +565,7 @@ mysin_neg:
 	lwc1	$f11, 0(pi2)
 	mtc1	$zero, $f13
 mysin_neg_loop:
-	c.olt.s	0, $f13, $f12
+	c.olt.s	0, $f13, $f12 # 0 < x ?
 	bc1t	0, mysin_pos
 	add.s	$f12, $f12, $f11 # x += 2*pi
 	j	mysin_neg_loop
@@ -927,3 +937,21 @@ pidiv2:
 	.word	1070141403 # pi / 2
 pivot:
 	.word	1056964608 # 0.5
+s01:
+	.word	1065353216 # 1.0
+s03:
+	.word	3190467243 # -0.16...
+s05:
+	.word	1007192201
+s07:
+	.word	3109031169
+s09:
+	.word	909700893
+s11:
+	.word	3000447531
+# float s01 = 1.0;
+# float s03 = -0.16666666666666666;
+# float s05 = 0.008333333333333333;
+# float s07 = -0.0001984126984126984;
+# float s09 = 0.0000027557319223985893;
+# float s11 = -0.00000002505210838544172;
