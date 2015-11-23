@@ -503,10 +503,10 @@ sin_v2:
 	li	$t0, -1
 	mtc1	$t0, $f2
 	cvt.s.w	$f2, $f2
-	mul.s	$f0, $f0, $f12
+	mul.s	$f0, $f0, $f2
 	jr	$ra
 sin_v3:
-	lwc1	$f4, 0(x4)
+	lwc1	$f4, 0(pi2)
 	sub.s	$f12, $f4, $f12
 	sw	$ra, 0($sp)
 	addi	$sp, $sp, -1
@@ -516,7 +516,7 @@ sin_v3:
 	li	$t0, -1
 	mtc1	$t0, $f2
 	cvt.s.w	$f2, $f2
-	mul.s	$f0, $f0, $f12
+	mul.s	$f0, $f0, $f2
 	jr	$ra
 mysin_pos:
 # f12: x (float)
@@ -534,7 +534,7 @@ category_loop:
 	mul.s	$f10, $f10, $f9
 	c.olt.s	0, $f12, $f10
 	bc1t	0, category_finalize
-	addi	$s0, $s0, 1
+	addi	$s0, $s0, 1 # n++
 	addi	$s2, $s2, 1
 	addi	$t1, $t1, 1
 	beq	$t1, $t2, category_4
@@ -554,11 +554,11 @@ category_finalize:
 	sub.s	$f12, $f12, $f11
 # switch by n % 4
 	addi	$t0, $s2, 0
-	beq	$s2, $r0, sin_v0
+	beq	$t0, $r0, sin_v0
 	addi	$t0, $s2, -1
-	beq	$s2, $r0, sin_v1
+	beq	$t0, $r0, sin_v1
 	addi	$t0, $s2, -2
-	beq	$s2, $r0, sin_v2
+	beq	$t0, $r0, sin_v2
 	j	sin_v3
 mysin_neg:
 # add 2*pi to x again and again until x >= 0 holds.
@@ -574,6 +574,7 @@ min_caml_sin:
 	c.olt.s	0, $f12, $f13
 	bc1t	0, mysin_neg
 	j	mysin_pos
+_min_caml_start:
 min_caml_cos:
 	lwc1	$f13, 0(pidiv2)
 	add.s	$f12, $f12, $f13
