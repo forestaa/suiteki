@@ -579,25 +579,68 @@ min_caml_cos:
 	lwc1	$f13, 0(pidiv2)
 	add.s	$f12, $f12, $f13
 	j	min_caml_sin
-min_caml_atan:
-	li	$v0, -3
-	sw	$ra, 0($sp)
-	addi    $sp, $sp, -1
-	syscall
-	addi    $sp, $sp, 1
-	sw	$ra, 0($sp)
+atan_calc:
+	lwc1	$f16, 0(t01)
+	lwc1	$f17, 0(t03)
+	lwc1	$f18, 0(t05)
+	lwc1	$f19, 0(t07)
+	lwc1	$f20, 0(t09)
+	lwc1	$f21, 0(t11)
+	mul.s	$f21, $f21, $f12
+	mul.s	$f21, $f21, $f12
+	add.s	$f21, $f21, $f20
+	mul.s	$f21, $f21, $f12
+	mul.s	$f21, $f21, $f12
+	add.s	$f21, $f21, $f19
+	mul.s	$f21, $f21, $f12
+	mul.s	$f21, $f21, $f12
+	add.s	$f21, $f21, $f18
+	mul.s	$f21, $f21, $f12
+	mul.s	$f21, $f21, $f12
+	add.s	$f21, $f21, $f17
+	mul.s	$f21, $f21, $f12
+	mul.s	$f21, $f21, $f12
+	add.s	$f21, $f21, $f16
+	mul.s	$f0, $f21, $f12
 	jr	$ra
-	lwc1	$f16, 0(b1)
-	lwc1	$f17, 0(b2)
-	lwc1	$f18, 0(b3)
-	lwc1	$f19, 0(b4)
-	mul.s	$f19, $f19, $f12
-	add.s	$f19, $f19, $f18
-	mul.s   $f19, $f19, $f12
-	add.s	$f19, $f19, $f17
-	mul.s	$f19, $f19, $f12
-	add.s	$f19, $f19, $f16
-	mul.s	$f0, $f19, $f12
+min_caml_atan:
+	li	$t0, 1
+	mtc1	$t0, $f5
+	cvt.s.w	$f5, $f5
+	c.olt.s	0, $f5, $f12 # 1 < x?
+	bc1t	0, min_caml_atan_bigger
+	li	$t0, -1
+	mtc1	$t0, $f5
+	cvt.s.w	$f5, $f5
+	c.olt.s	0, $f12, $f5 # x < -1?
+	bc1t	0, min_caml_atan_smaller
+	j	atan_calc
+min_caml_atan_bigger:
+	li	$t0, 1
+	mtc1	$t0, $f3
+	cvt.s.w	$f3, $f3
+	div.s	$f12, $f3, $f12
+	sw	$ra, 0($sp)
+	addi	$sp, $sp, -1
+	jal	atan_calc
+	addi	$sp, $sp, 1
+	lw	$ra, 0($sp)
+	lwc1	$f2, 0(pidiv2)
+	sub.s	$f0, $f2, $f0
+	jr	$ra
+min_caml_atan_smaller:
+	li	$t0, 1
+	mtc1	$t0, $f3
+	cvt.s.w	$f3, $f3
+	div.s	$f12, $f3, $f12
+	sw	$ra, 0($sp)
+	addi	$sp, $sp, -1
+	jal	atan_calc
+	addi	$sp, $sp, 1
+	lw	$ra, 0($sp)
+	lwc1	$f2, 0(pidiv2)
+	neg.s	$f2, $f2
+	sub.s	$f0, $f2, $f0
 	jr	$ra
 mul:
 # calculate a0 * a1.
@@ -950,9 +993,15 @@ s09:
 	.word	909700893
 s11:
 	.word	3000447531
-# float s01 = 1.0;
-# float s03 = -0.16666666666666666;
-# float s05 = 0.008333333333333333;
-# float s07 = -0.0001984126984126984;
-# float s09 = 0.0000027557319223985893;
-# float s11 = -0.00000002505210838544172;
+t01:
+	.word	1065353216 # 1.0
+t03:
+	.word	3198855851
+t05:
+	.word	1045220557
+t07:
+	.word	3188869413
+t09:
+	.word	1038323257
+t11:
+	.word	3183095436
