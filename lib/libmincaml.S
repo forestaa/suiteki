@@ -434,26 +434,23 @@ min_caml_sqrt:
 	sqrt.s	$f0, $f12
 	jr	$ra
 min_caml_floor:
-	trunc.w.s	$f12, $f12
-	cvt.s.w	$f0, $f12
 	li	$t0, 0
 	mtc1	$t0, $f3
 	cvt.s.w	$f3, $f3
-	c.olt.s	0, $f0, $f3 # if $f0 < 0
+	c.olt.s	0, $f12, $f3 # if $f12 < 0
 	bc1t	0, min_caml_floor_neg
+	trunc.w.s	$f12, $f12
+	cvt.s.w	$f0, $f12
 	jr	$ra
 min_caml_floor_neg:
+	trunc.w.s	$f12, $f12
+	cvt.s.w	$f0, $f12
 	li	$t0, 1
 	mtc1	$t0, $f3
 	cvt.s.w	$f3, $f3
 	sub.s	$f0, $f0, $f3
 	jr	$ra
 min_caml_int_of_float:
-#	trunc.w.s	$f3, $f12
-#	cvt.s.w	$f3, $f3
-#	sub.s	$f4, $f12, $f3
-# min_caml_int_of_float_pos:
-# min_caml_int_of_float_neg:
 min_caml_truncate:
 	trunc.w.s	$f12, $f12
 	mfc1	$v0, $f12
