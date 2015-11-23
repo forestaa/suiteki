@@ -398,7 +398,8 @@ min_caml_read_float_point_exists:
 	mtc1	$v0, $f1
 	cvt.s.w	$f1, $f1
 # あとは割るだけ
-	div.s	$f0, $f0, $f1
+	inv.s	$f1, $f1
+	mul.s	$f0, $f0, $f1
 	jr	$ra
 min_caml_create_array:
 	move	$v0, $hp # (return value)
@@ -616,7 +617,8 @@ min_caml_atan_bigger:
 	li	$t0, 1
 	mtc1	$t0, $f3
 	cvt.s.w	$f3, $f3
-	div.s	$f12, $f3, $f12
+	inv.s	$f12, $f12
+	mul.s	$f12, $f3, $f12
 	sw	$ra, 0($sp)
 	addi	$sp, $sp, -1
 	jal	atan_calc
@@ -629,7 +631,8 @@ min_caml_atan_smaller:
 	li	$t0, 1
 	mtc1	$t0, $f3
 	cvt.s.w	$f3, $f3
-	div.s	$f12, $f3, $f12
+	inv.s	$f12, $f12
+	mul.s	$f12, $f3, $f12
 	sw	$ra, 0($sp)
 	addi	$sp, $sp, -1
 	jal	atan_calc
