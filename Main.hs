@@ -295,9 +295,9 @@ parseInstruction i pc e dm
                               , "000010"
                               ]
                             ]
-    | head i == "div.s"   = [ [ "010001"
+    | head i == "inv.s"   = [ [ "010001"
                               , "10000"
-                              , addrF (i !! 3)
+                              , "00000"
                               , addrF (i !! 2)
                               , addrF (i !! 1)
                               , "000011"
