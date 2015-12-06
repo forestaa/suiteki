@@ -1216,6 +1216,10 @@ min_caml_reflections:
 	.word	0
 min_caml_n_reflections:
 	.word	0
+min_caml_diffuse_ray:
+	.word	0
+	.word	0
+	.word	0
 x4:
 	.word	1086911939
 x3:
