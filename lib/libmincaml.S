@@ -1,4 +1,11 @@
 	.text
+min_caml_fhalf:
+	li	$t0, 2
+	mtc1	$t0, $f5
+	cvt.s.w	$f5, $f5
+	inv.s	$f5, $f5
+	mul.s	$f0, $f12, $f5
+	jr	$ra
 min_caml_fequal:
 	c.eq.s	0, $f12, $f13
 	bc1t	0, min_caml_fequal_true
