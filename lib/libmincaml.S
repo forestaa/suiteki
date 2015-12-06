@@ -1016,6 +1016,14 @@ min_caml_wscan:
 	.word	0
 	.word	0
 	.word	0
+min_caml_startp:
+	.word	0
+	.word	0
+	.word	0
+min_caml_startp_fast:
+	.word	0
+	.word	0
+	.word	0
 x4:
 	.word	1086911939
 x3:
