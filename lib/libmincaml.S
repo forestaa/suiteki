@@ -1,4 +1,6 @@
 	.text
+min_caml_fabs:
+	j	min_caml_abs_float
 min_caml_fiszero:
 	mtc1	$r0, $f5
 	cvt.s.w	$f5, $f5
@@ -31,6 +33,9 @@ min_caml_fisneg_true:
 	jr	$ra
 min_caml_fneg:
 	neg.s	$f0, $f12
+	jr	$ra
+min_caml_fsqr:
+	sqrt.s	$f0, $f12
 	jr	$ra
 min_caml_print_newline:
 	li	$a0, 10
@@ -806,6 +811,20 @@ min_caml_dbg:
 min_caml_screen:
 	.word	0
 	.word	0
+	.word	0
+min_caml_screenx_dir:
+	.word	0
+	.word	0
+	.word	0
+min_caml_screeny_dir:
+	.word	0
+	.word	0
+	.word	0
+min_caml_screenz_dir:
+	.word	0
+	.word	0
+	.word	0
+min_caml_n_objects:
 	.word	0
 min_caml_vp:
 	.word	0
