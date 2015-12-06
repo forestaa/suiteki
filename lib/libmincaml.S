@@ -1,4 +1,6 @@
 	.text
+min_caml_print_char:
+	j	min_caml_print_byte
 min_caml_fhalf:
 	li	$t0, 2
 	mtc1	$t0, $f5
