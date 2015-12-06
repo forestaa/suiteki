@@ -1233,6 +1233,9 @@ min_caml_image_size:
 	.word	0
 min_caml_scan_pitch:
 	.word	0
+min_caml_image_center:
+	.word	0
+	.word	0
 x4:
 	.word	1086911939
 x3:
