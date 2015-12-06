@@ -1024,6 +1024,9 @@ min_caml_startp_fast:
 	.word	0
 	.word	0
 	.word	0
+min_caml_light_dirvec:
+	.word	0
+	.word	0
 x4:
 	.word	1086911939
 x3:
