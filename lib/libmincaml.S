@@ -1,4 +1,20 @@
 	.text
+min_caml_fequal:
+	c.eq.s	0, $f12, $f13
+	bc1t	0, min_caml_fequal_true
+	li	$v0, 0
+	jr	$ra
+min_caml_fless_true:
+	li	$v0, 1
+	jr	$ra
+min_caml_fless:
+	c.olt.s	0, $f12, $f13
+	bc1t	0, min_caml_fless_true
+	li	$v0, 0
+	jr	$ra
+min_caml_fless_true:
+	li	$v0, 1
+	jr	$ra
 min_caml_fabs:
 	j	min_caml_abs_float
 min_caml_fiszero:
