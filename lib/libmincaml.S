@@ -1,4 +1,34 @@
 	.text
+min_caml_fiszero:
+	mtc1	$r0, $f5
+	cvt.s.w	$f5, $f5
+	c.eq.s	0, $f5, $f12
+	bc1t	0, min_caml_fiszero_true
+	li	$v0, 0
+	jr	$ra
+min_caml_fiszero_true:
+	li	$v0, 1
+	jr	$ra
+min_caml_fispos:
+	mtc1	$r0, $f5
+	cvt.s.w	$f5, $f5
+	c.olt.s	0, $f5, $f12
+	bc1t	0, min_caml_fispos_true
+	li	$v0, 0
+	jr	$ra
+min_caml_fispos_true:
+	li	$v0, 1
+	jr	$ra
+min_caml_fisneg:
+	mtc1	$r0, $f5
+	cvt.s.w	$f5, $f5
+	c.olt.s	0, $f12, $f5
+	bc1t	0, min_caml_fisneg_true
+	li	$v0, 0
+	jr	$ra
+min_caml_fisneg_true:
+	li	$v0, 1
+	jr	$ra
 min_caml_print_newline:
 	li	$a0, 10
 	sw	$ra, 0($sp)
@@ -614,11 +644,7 @@ min_caml_atan:
 	bc1t	0, min_caml_atan_smaller
 	j	atan_calc
 min_caml_atan_bigger:
-	li	$t0, 1
-	mtc1	$t0, $f3
-	cvt.s.w	$f3, $f3
 	inv.s	$f12, $f12
-	mul.s	$f12, $f3, $f12
 	sw	$ra, 0($sp)
 	addi	$sp, $sp, -1
 	jal	atan_calc
@@ -628,11 +654,7 @@ min_caml_atan_bigger:
 	sub.s	$f0, $f2, $f0
 	jr	$ra
 min_caml_atan_smaller:
-	li	$t0, 1
-	mtc1	$t0, $f3
-	cvt.s.w	$f3, $f3
 	inv.s	$f12, $f12
-	mul.s	$f12, $f3, $f12
 	sw	$ra, 0($sp)
 	addi	$sp, $sp, -1
 	jal	atan_calc
