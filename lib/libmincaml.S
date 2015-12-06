@@ -29,6 +29,9 @@ min_caml_fisneg:
 min_caml_fisneg_true:
 	li	$v0, 1
 	jr	$ra
+min_caml_fneg:
+	neg.s	$f0, $f12
+	jr	$ra
 min_caml_print_newline:
 	li	$a0, 10
 	sw	$ra, 0($sp)
