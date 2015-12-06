@@ -13,7 +13,7 @@ min_caml_fequal:
 	bc1t	0, min_caml_fequal_true
 	li	$v0, 0
 	jr	$ra
-min_caml_fless_true:
+min_caml_fequal_true:
 	li	$v0, 1
 	jr	$ra
 min_caml_fless:
@@ -1234,6 +1234,10 @@ min_caml_image_size:
 min_caml_scan_pitch:
 	.word	0
 min_caml_image_center:
+	.word	0
+	.word	0
+min_caml_ptrace_dirvec:
+	.word	0
 	.word	0
 	.word	0
 x4:
