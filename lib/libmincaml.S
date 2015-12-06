@@ -60,7 +60,7 @@ min_caml_fneg:
 	neg.s	$f0, $f12
 	jr	$ra
 min_caml_fsqr:
-	sqrt.s	$f0, $f12
+	mul.s	$f0, $f12, $f12
 	jr	$ra
 min_caml_print_newline:
 	li	$a0, 10
@@ -1024,9 +1024,6 @@ min_caml_startp:
 	.word	0
 min_caml_startp_fast:
 	.word	0
-	.word	0
-	.word	0
-min_caml_light_dirvec:
 	.word	0
 	.word	0
 min_caml_intersection_point:
