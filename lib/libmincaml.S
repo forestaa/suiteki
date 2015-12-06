@@ -1027,6 +1027,12 @@ min_caml_startp_fast:
 min_caml_light_dirvec:
 	.word	0
 	.word	0
+min_caml_intersection_point:
+	.word	0
+	.word	0
+	.word	0
+min_caml_intersected_object_id:
+	.word	0
 x4:
 	.word	1086911939
 x3:
