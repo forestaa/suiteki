@@ -1220,6 +1220,12 @@ min_caml_diffuse_ray:
 	.word	0
 	.word	0
 	.word	0
+min_caml_dirvecs:
+	.word	0
+	.word	0
+	.word	0
+	.word	0
+	.word	0
 x4:
 	.word	1086911939
 x3:
