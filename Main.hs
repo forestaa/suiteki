@@ -540,11 +540,14 @@ toDec :: String -> Int
 toDec = foldl' (\acc x -> acc * 2 + digitToInt x) 0
 
 expandLI :: [String] -> Int -> Environment -> DataMap -> [Instruction]
-expandLI i pc e dm = instructionLUI ++ instructionORI
+expandLI i pc e dm
+    -- | -32767 <= num && num <= 32767 = instructionORI
+    | otherwise = instructionLUI ++ instructionORI
   where
-    immediate = if isJust (readMaybe (i !! 2) :: Maybe Int)
-                  then binaryExp (read (i !! 2)) 32
-                  else binaryExp (searchLabel (i !! 2) e dm) 32
+    num = if isJust (readMaybe (i !! 2) :: Maybe Int)
+                  then read (i !! 2)
+                  else searchLabel (i !! 2) e dm
+    immediate = binaryExp num 32
     upper = show . toDec $ take 16 immediate
     lower = show . toDec $ drop 16 immediate
     lui = [ "lui" , i !! 1 , upper ]
