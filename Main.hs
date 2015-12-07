@@ -76,8 +76,8 @@ writeBinary a = do
 
     let d = dataSection ++ libDataSection
     let dataMap = if noExternals a
-                    then constructDataMap dataSection 65536 dataSection
-                    else constructDataMap d 65536 d
+                    then constructDataMap dataSection 0 dataSection
+                    else constructDataMap d 0 d
 
     let dataList = parseDataMap dataMap
 
