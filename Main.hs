@@ -66,7 +66,7 @@ main = execParser opts >>= writeBinary
 writeBinary :: Args -> IO ()
 writeBinary a = do
     ss <- readFile (assembly a)
-    let is = map words $ lines ss -- instructions
+    let is = filter (/= []) $ map words $ lines ss -- instructions
 
     lib <- readFile (library a)
     let ys = map words $ lines lib
@@ -774,4 +774,3 @@ registerToAddressFloat = M.fromList [ ("$f0",  "00000")
                                     , ("$f30", "11110")
                                     , ("$f31", "11111")
                                     ]
-
