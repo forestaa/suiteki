@@ -202,6 +202,45 @@ min_caml_read_token_finish:
 	move	$v1, $s0
 	jr	$ra
 min_caml_read_int:
+  li  $t0, 0 # counter
+	li  $t1, 0 
+	li	$v0, 12
+	syscall
+  add $t1, $t1, $v0
+  li $v0, 12
+  syscall
+  sll $v0, $v0, 8
+  add $t1, $t1, $v0
+  li $v0, 12
+  syscall
+  sll $v0, $v0, 16
+  add $t1, $t1, $v0
+  li $v0, 12
+  syscall
+  sll $v0, $v0, 24
+  add $v0, $t1, $v0
+  jr  $ra
+min_caml_read_float:
+  li  $t0, 0 # counter
+	li  $t1, 0 
+	li	$v0, 12
+	syscall
+  add $t1, $t1, $v0
+  li $v0, 12
+  syscall
+  sll $v0, $v0, 8
+  add $t1, $t1, $v0
+  li $v0, 12
+  syscall
+  sll $v0, $v0, 16
+  add $t1, $t1, $v0
+  li $v0, 12
+  syscall
+  sll $v0, $v0, 24
+  add $v0, $t1, $v0
+  mtc1  $v0, $f0
+  jr  $ra
+min_caml_read_int_old:  
 	sw	$ra, 0($sp)
 	addi	$sp, $sp, -1
 	jal	min_caml_read_token
@@ -345,7 +384,7 @@ min_caml_str_point_at_found_dot:
 	addi	$t0, $t0, 1
 	sub	$v0, $a1, $t0
 	jr	$ra
-min_caml_read_float:
+min_caml_read_float_old:
 	sw	$ra, 0($sp)
 	addi	$sp, $sp, -1
 	jal	min_caml_read_token
@@ -493,9 +532,6 @@ min_caml_abs_float:
 	jr	$ra
 min_caml_abs_negate:
 	neg.s	$f0, $f12
-	jr	$ra
-min_caml_sqrt:
-	sqrt.s	$f0, $f12
 	jr	$ra
 min_caml_floor:
 	li	$t0, 0
@@ -696,6 +732,47 @@ min_caml_atan_smaller:
 	lwc1	$f2, 0(pidiv2)
 	neg.s	$f2, $f2
 	sub.s	$f0, $f2, $f0
+	jr	$ra
+# abs
+# 	li	$t0, 0
+# 	mtc1	$t0, $f3
+# 	c.olt.s	0, $f12, $f3
+# 	bc1t	0, min_caml_abs_negate
+# 	mov.s	$f0, $f12
+# 	jr	$ra
+# min_caml_abs_negate:
+# 	neg.s	$f0, $f12
+  # 	jr	$ra
+min_caml_sqrt:
+  sqrt.s  $f0, $f12
+  jr  $ra
+min_caml_sqrt_old:
+	lwc1	$f5, 0(zp5)
+	lwc1	$f10, 0(diff)
+	mul.s	$f0, $f12, $f5 # y = x / 2.0
+	li	$at, 0
+	mtc1	$at, $f7 # last = 0
+	li	$at, 0
+	mtc1	$at, $f3
+min_caml_sqrt_loop:
+	sub.s	$f9, $f0, $f7
+	c.olt.s	0, $f9, $f3 # < 0 ?
+	bc1t	0, min_caml_sqrt_loop_neg
+	c.olt.s	0, $f9, $f10 # f9 < f10 = 1.0*10^(-6)? (where f9 > 0)
+	bc1t	0, min_caml_sqrt_finalize
+	j	min_caml_sqrt_loop_calc
+min_caml_sqrt_loop_neg:
+	neg.s	$f11, $f9
+	c.olt.s	0, $f11, $f10
+	bc1t	0, min_caml_sqrt_finalize
+min_caml_sqrt_loop_calc:
+	mov.s	$f7, $f0 # last = y
+	inv.s	$f8, $f0
+	mul.s	$f8, $f12, $f8
+	add.s	$f8, $f0, $f8
+	mul.s	$f0, $f8, $f5
+	j	min_caml_sqrt_loop
+min_caml_sqrt_finalize:
 	jr	$ra
 mul:
 # calculate a0 * a1.
@@ -1293,3 +1370,7 @@ t09:
 	.word	1038323257
 t11:
 	.word	3183095436
+zp5: # 0.5
+	.word	1056964608
+diff: # 1.0 * 10^(-6)
+	.word	897988541
