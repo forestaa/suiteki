@@ -10,6 +10,7 @@ import Numeric
 import Options.Applicative
 import System.Posix.Files
 import Text.Read
+
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Map as M
 
@@ -388,12 +389,7 @@ parseInstruction i pc e dm
                               , binaryExp (read (i !! 2)) 16
                               ]
                             ]
-    | head i == "ori"     = [ [ "001101"
-                              , addr (i !! 2)
-                              , addr (i !! 1)
-                              , binaryExp (read (i !! 3)) 16
-                              ]
-                            ]
+    | head i == "ori"     = expandORI i e dm
     | head i == "lw"      = parseIndexedInstruction i
     | head i == "sw"      = parseIndexedInstruction i
     | head i == "lwc1"    = parseIndexedInstruction i
@@ -554,6 +550,15 @@ expandLI i pc e dm
     ori = [ "ori" , i !! 1 , i !! 1 , lower ]
     instructionLUI = parseInstruction lui pc e dm
     instructionORI = parseInstruction ori pc e dm
+
+expandORI :: [String] -> Environment -> DataMap -> [Instruction]
+expandORI i e dm = [ori]
+  where
+    num = if isJust (readMaybe (i !! 3) :: Maybe Int)
+                  then read (i !! 3)
+                  else searchLabel (i !! 3) e dm
+    immediate = binaryExp num 16
+    ori = [ "001101", addr (i !! 2), addr (i !! 1) , immediate ]
 
 expandMOVE :: [String] -> Int -> Environment -> DataMap -> [Instruction]
 expandMOVE i = parseInstruction ["or", i !! 1, i !! 2, "$r0"]
