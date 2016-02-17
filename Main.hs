@@ -79,7 +79,7 @@ writeBinary a = do
     let dataMap = if noExternals a
                     then constructDataMap dataSection 0 dataSection
                     else constructDataMap d 0 d
-
+    
     let dataList = parseDataMap dataMap
 
     let libTextSection = expandLabelInLWC1 (concat $ extractText ys) dataMap
@@ -110,15 +110,14 @@ expandLabelInLWC1 :: [[String]] -> DataMap -> [[String]]
 expandLabelInLWC1 [] _ = []
 expandLabelInLWC1 (i:is) dm
     | null i = expandLabelInLWC1 is dm
-    | head i == "lwc1" && head baseName /= '$' = [ [ "li", "$at", base ]
-                                                 , [ "lwc1", i !! 1, "0($at)" ]
-                                                 ] ++ expandLabelInLWC1 is dm
+    | doexpand && (0 <= imm && imm < 65536)= ["lwc1", i !! 1, base ++ "($zero)"] : expandLabelInLWC1 is dm
+    | doexpand = [["li", "$at", base ] , ["lwc1", i !! 1, "0($at)"]] ++ expandLabelInLWC1 is dm
     | otherwise = i : expandLabelInLWC1 is dm
   where
     (baseName, _) = parseRegisterWithOffset (i !! 2)
-    base = if head baseName == '$'
-             then baseName
-             else show $ searchLabel baseName M.empty dm
+    imm = searchLabel baseName M.empty dm
+    base = show imm
+    doexpand = head i == "lwc1" && head baseName /= '$'
 
 -- read library and add instructions recursively until there is no external
 -- function.

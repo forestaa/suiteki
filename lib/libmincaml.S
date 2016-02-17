@@ -2,7 +2,7 @@
 min_caml_print_char:
 	j	min_caml_print_byte
 min_caml_fhalf:
-	li	$t0, 2
+  ori  $t0, $zero, 2
 	mtc1	$t0, $f5
 	cvt.s.w	$f5, $f5
 	inv.s	$f5, $f5
@@ -11,18 +11,19 @@ min_caml_fhalf:
 min_caml_fequal:
 	c.eq.s	0, $f12, $f13
 	bc1t	0, min_caml_fequal_true
-	li	$v0, 0
+  ori $v0, $zero, 0
+#	li	$v0, 0
 	jr	$ra
 min_caml_fequal_true:
-	li	$v0, 1
+  ori $v0, $zero, 1
 	jr	$ra
 min_caml_fless:
 	c.olt.s	0, $f12, $f13
 	bc1t	0, min_caml_fless_true
-	li	$v0, 0
+  ori  $v0, $zero, 0
 	jr	$ra
 min_caml_fless_true:
-	li	$v0, 1
+  ori  $v0, $zero, 1
 	jr	$ra
 min_caml_fabs:
 	j	min_caml_abs_float
@@ -31,30 +32,30 @@ min_caml_fiszero:
 	cvt.s.w	$f5, $f5
 	c.eq.s	0, $f5, $f12
 	bc1t	0, min_caml_fiszero_true
-	li	$v0, 0
+  ori $v0, $zero, 0
 	jr	$ra
 min_caml_fiszero_true:
-	li	$v0, 1
+  ori $v0, $zero, 1
 	jr	$ra
 min_caml_fispos:
 	mtc1	$r0, $f5
 	cvt.s.w	$f5, $f5
 	c.olt.s	0, $f5, $f12
 	bc1t	0, min_caml_fispos_true
-	li	$v0, 0
+  ori $v0, $zero, 0
 	jr	$ra
 min_caml_fispos_true:
-	li	$v0, 1
+  ori $v0, $zero, 1
 	jr	$ra
 min_caml_fisneg:
 	mtc1	$r0, $f5
 	cvt.s.w	$f5, $f5
 	c.olt.s	0, $f12, $f5
 	bc1t	0, min_caml_fisneg_true
-	li	$v0, 0
+  ori $v0, $zero, 0
 	jr	$ra
 min_caml_fisneg_true:
-	li	$v0, 1
+  ori $v0, $zero, 1
 	jr	$ra
 min_caml_fneg:
 	neg.s	$f0, $f12
@@ -63,7 +64,7 @@ min_caml_fsqr:
 	mul.s	$f0, $f12, $f12
 	jr	$ra
 min_caml_print_newline:
-	li	$a0, 10
+  ori $a0, $zero, 10
 	sw	$ra, 0($sp)
 	addi    $sp, $sp, -1
 	jal	min_caml_print_byte
@@ -76,14 +77,14 @@ min_caml_print_int:
 min_caml_print_int_minus:
 	# print '-'
 	sw	$a0, 0($sp)
-	li	$a0, 45
+  ori $a0, $zero, 45
 	sw	$ra, -1($sp)
 	addi    $sp, $sp, -2
 	jal	min_caml_print_byte
 	addi    $sp, $sp, 2
 	lw	$ra, -1($sp)
 	lw	$a0, 0($sp)
-	li	$t0, 0
+  ori $t0, $zero, 0
 	sub	$a0, $t0, $a0 # negate a0
 min_caml_print_int_cont:
 	sw	$ra, 0($sp)
@@ -112,7 +113,7 @@ min_caml_print_int_final:
 	lw	$ra, 0($sp)
 	jr	$ra
 min_caml_print_byte:
-	li	$v0, 11
+  ori $v0, $zero, 11
 	sw	$ra, 0($sp)
 	addi    $sp, $sp, -1
 	syscall
@@ -145,7 +146,7 @@ min_caml_prerr_int_final:
 	lw	$ra, 0($sp)
 	jr	$ra
 min_caml_prerr_byte:
-	li	$v0, 103
+  ori $v0, $zero, 103
 	sw	$ra, 0($sp)
 	addi    $sp, $sp, -1
 	syscall
@@ -154,7 +155,7 @@ min_caml_prerr_byte:
 	jr	$ra
 min_caml_prerr_float:
 min_caml_read_char:
-	li	$v0, 12
+  ori $v0, $zero, 12
 	sw	$ra, 0($sp)
 	addi    $sp, $sp, -1
 	syscall
@@ -166,7 +167,7 @@ min_caml_read_token:
 # ' ' or '\t' or '\r' or '\n'), storing them in heap, and return the head address of
 # the stored characters.
 # also, return the length of the string using $v1.
-	li	$s0, 0
+  ori $s0, $zero, 0
 	move	$t0, $hp
 min_caml_read_token_loop:
 	sw	$ra, 0($sp)
@@ -202,39 +203,39 @@ min_caml_read_token_finish:
 	move	$v1, $s0
 	jr	$ra
 min_caml_read_int:
-  li  $t0, 0 # counter
-	li  $t1, 0 
-	li	$v0, 12
+  ori $t0, $zero, 0 # counter
+  ori $t1, $zero, 0
+  ori $v0, $zero, 12
 	syscall
   add $t1, $t1, $v0
-  li $v0, 12
+  ori $v0, $zero, 12
   syscall
   sll $v0, $v0, 8
   add $t1, $t1, $v0
-  li $v0, 12
+  ori $v0, $zero, 12
   syscall
   sll $v0, $v0, 16
   add $t1, $t1, $v0
-  li $v0, 12
+  ori $v0, $zero, 12
   syscall
   sll $v0, $v0, 24
   add $v0, $t1, $v0
   jr  $ra
 min_caml_read_float:
-  li  $t0, 0 # counter
-	li  $t1, 0 
-	li	$v0, 12
+  ori $t0, $zero, 0 # counter
+  ori $t1, $zero, 0
+  ori $v0, $zero, 12
 	syscall
   add $t1, $t1, $v0
-  li $v0, 12
+  ori $v0, $zero, 12
   syscall
   sll $v0, $v0, 8
   add $t1, $t1, $v0
-  li $v0, 12
+  ori $v0, $zero, 12
   syscall
   sll $v0, $v0, 16
   add $t1, $t1, $v0
-  li $v0, 12
+  ori $v0, $zero, 12
   syscall
   sll $v0, $v0, 24
   add $v0, $t1, $v0
@@ -249,7 +250,7 @@ min_caml_read_int_old:
 # この時点で$v0に文字列の先頭のアドレスが、$v1にはその長さがある。
 # まず先頭文字が'-'かどうかを確認する。もし'-'なら負の数なので$v0をインクリメントして
 # $v1をデクリメントし、符号を表すレジスタを-1にする。
-	li	$s0, 1 # 符号を表すレジスタ
+  ori $s0, $zero, 1 # 符号を表すレジスタ
 	lw	$t0, 0($v0)
 	addi	$t2, $t0, -45  # hyphen?
 	beq	$t2, $r0, min_caml_read_int_negative
@@ -260,8 +261,8 @@ min_caml_read_int_negative:
 	li	$s0, -1
 min_caml_read_int_cont:
 # あとは自然数だと思って読めばオーケー。
-	li	$t0, 1 # ループごとに10倍される数
-	li	$s1, 0 # 最終的には返り値となる数
+  ori $t0, $zero, 1 # ループごとに10倍される数
+  ori $s1, $zero, 0 # 最終的には返り値となる数
 	addi	$s2, $v1, -1 # 文字列を後ろから読んでいくための変数(iと呼ぶ)
 # コードを読みやすくするためs3に文字列の先頭のアドレスを移動する
 # (v0だとreturn valueに衝突して色々面倒)
@@ -293,7 +294,7 @@ min_caml_read_int_loop:
 	add	$s1, $s1, $v0
 # つぎにt0 * 10を計算する。
 	move	$a0, $t0
-	li	$a1, 10
+  ori $a1, $zero, 10
 	sw	$ra, 0($sp)
 	sw	$s3, -1($sp)
 	sw	$t0, -2($sp)
@@ -323,7 +324,7 @@ min_caml_str_has_point_p:
 # a0: the head address of a string
 # a1: the length of the string
 # return value: 1 if and only if the string contains '.', otherwise 0.
-	li	$t0, 0
+  ori $t0, $zero, 0
 	addi	$t1, $a1, -1
 min_caml_str_has_point_p_loop:
 	beq	$t0, $t1, min_caml_str_has_point_p_false
@@ -334,10 +335,10 @@ min_caml_str_has_point_p_loop:
 	addi	$t0, $t0, 1
 	j	min_caml_str_has_point_p_loop
 min_caml_str_has_point_p_false:
-	li	$v0, 0
+  ori $v0, $zero, 0      
 	jr	$ra
 min_caml_str_has_point_p_true:
-	li	$v0, 1
+  ori $v0, $zero, 1
 	jr	$ra
 min_caml_str_with_no_point:
 # a0: the head address of a string
@@ -346,8 +347,8 @@ min_caml_str_with_no_point:
 # the string constructed by eliminating all dots ('.') from the given string.
 # e.g., if the given string is "255.0", then the returned string is "2550"
 # note that this functions assumes that the given string contains '.'.
-	li	$t0, 0
-	li	$t4, 0
+  ori $t0, $zero, 0
+  ori $t4, $zero, 0
 	addi	$t1, $a1, -1 # assuming that the str contains '.'
 	move	$v0, $hp
 min_caml_str_with_no_point_loop:
@@ -372,7 +373,7 @@ min_caml_str_point_at:
 # return value: the location of '.', counted from tail.
 # e.g., if input string is "255.0", then the result is 1. if input is "22.00", then 2.
 # note that this function assumes that the given string contains '.'.
-	li	$t0, 0 # counter
+  ori $t0, $zero, 0 # counter
 min_caml_str_point_at_loop:
 	add	$t2, $a0, $t0
 	lw	$t2, 0($t2)
@@ -393,7 +394,7 @@ min_caml_read_float_old:
 # この時点で$v0に文字列の先頭のアドレスが、$v1にはその長さがある。
 # まず先頭文字が'-'かどうかを確認する。もし'-'なら負の数なので$v0をインクリメントして
 # $v1をデクリメントし、符号を表すレジスタを-1にする。
-	li	$s0, 1 # 符号を表すレジスタ
+  ori $s0, $zero, 1 # 符号を表すレジスタ
 	lw	$t0, 0($v0)
 	addi	$t2, $t0, -45  # hyphen?
 	beq	$t2, $r0, min_caml_read_float_negative
@@ -490,7 +491,7 @@ min_caml_read_float_point_exists:
 	cvt.s.w	$f0, $f0
 # 10*kでf0を割るために10*kを計算する。
 	move	$a0, $s1
-	li	$a1, 10
+  ori $a1, $zero, 10
 	sw	$ra, 0($sp)
 	swc1	$f0, -1($sp)
 	jal	mul
@@ -524,7 +525,7 @@ create_float_array_cont:
 	addi	$hp, $hp, 1
 	j	create_float_array_loop
 min_caml_abs_float:
-	li	$t0, 0
+  ori $t0, $zero, 0
 	mtc1	$t0, $f3
 	c.olt.s	0, $f12, $f3
 	bc1t	0, min_caml_abs_negate
@@ -534,7 +535,7 @@ min_caml_abs_negate:
 	neg.s	$f0, $f12
 	jr	$ra
 min_caml_floor:
-	li	$t0, 0
+  ori $t0, $zero, 0
 	mtc1	$t0, $f3
 	cvt.s.w	$f3, $f3
 	c.olt.s	0, $f12, $f3 # if $f12 < 0
@@ -545,7 +546,7 @@ min_caml_floor:
 min_caml_floor_neg:
 	trunc.w.s	$f12, $f12
 	cvt.s.w	$f0, $f12
-	li	$t0, 1
+  ori $t0, $zero, 1
 	mtc1	$t0, $f3
 	cvt.s.w	$f3, $f3
 	sub.s	$f0, $f0, $f3
@@ -618,11 +619,11 @@ sin_v3:
 mysin_pos:
 # f12: x (float)
 # note: assuming x >= 0
-	li	$s0, 0
-	li	$s1, 0 # n / 4 (as integer)
-	li	$s2, 0 # n % 4
-	li	$t1, 0 # counter for s1
-	li	$t2, 4 # for comparison
+  ori $s0, $zero, 0
+  ori $s1, $zero, 0 # n / 4 (as integer)
+  ori $s2, $zero, 0 # n % 4
+  ori $t1, $zero, 0 # counter for s1
+  ori $t2, $zero, 4 # for comparison
 	lwc1	$f9, 0(pidiv2)
 category_loop:
 	addi	$t0, $s0, 1
@@ -637,8 +638,8 @@ category_loop:
 	beq	$t1, $t2, category_4
 	j	category_loop
 category_4:
-	li	$t1, 0
-	li	$s2, 0
+  ori $t1, $zero, 0
+  ori $s2, $zero, 0
 	addi	$s1, $s1, 1
 	j	category_loop
 category_finalize:
@@ -701,7 +702,7 @@ atan_calc:
 	mul.s	$f0, $f21, $f12
 	jr	$ra
 min_caml_atan:
-	li	$t0, 1
+  ori $t0, $zero, 1
 	mtc1	$t0, $f5
 	cvt.s.w	$f5, $f5
 	c.olt.s	0, $f5, $f12 # 1 < x?
@@ -750,9 +751,9 @@ min_caml_sqrt_old:
 	lwc1	$f5, 0(zp5)
 	lwc1	$f10, 0(diff)
 	mul.s	$f0, $f12, $f5 # y = x / 2.0
-	li	$at, 0
+  ori $at, $zero, 0
 	mtc1	$at, $f7 # last = 0
-	li	$at, 0
+  ori $at, $zero, 0
 	mtc1	$at, $f3
 min_caml_sqrt_loop:
 	sub.s	$f9, $f0, $f7
@@ -776,15 +777,15 @@ min_caml_sqrt_finalize:
 	jr	$ra
 mul:
 # calculate a0 * a1.
-	li	$v0, 0
+  ori $v0, $zero, 0
 	beq	$a0, $zero, mul_return_zero
 	j	mul_loop
 mul_return_zero:
-	li	$v0, 0
+  ori $v0, $zero, 0
 	jr	$ra
 mul_loop:
 	beq	$a0, $zero, mul_final
-	li	$s0, 1
+  ori $s0, $zero, 1
 	and	$s0, $a0, $s0
 	bne	$s0, $zero, mul_if_true
 	j	mul_loop_cont
@@ -799,19 +800,19 @@ mul_final:
 div10:
 # divide a0 by 10, storing the quotient in v0 and the remaining v1.
 	move	$t8, $a0 # assume a0 = 4
-	li	$t0, 10
+  ori $t0, $zero, 10
 	addi	$t0, $a0, -10
 	bltz	$t0, div10_smaller_than_10
 	j	div10_cont
 div10_smaller_than_10:
-	li	$t0, 0
+  ori $t0, $zero, 0
 	move	$v0, $r0
 	move	$v1, $a0
 	jr	$ra
 div10_cont:
-	li	$t0, 10 # de = 10
-	li	$t1, 1 # temp = 1
-	li	$t2, 0 # quotient = 0
+  ori $t0, $zero, 10 # de = 10
+  ori $t1, $zero, 1 # temp = 1
+  ori $t2, $zero, 0 # quotient = 0
 div10_shift:
 	sub	$t3, $a0, $t0 # t3 = a0 - t0 = nu - de
 	bltz	$t3, div10_calc # nu - de > 0 <=> not (nu-de <= 0)
@@ -819,7 +820,7 @@ div10_shift:
 	sll	$t1, $t1, 1 # temp <<= 1
 	j	div10_shift
 div10_calc:
-	li	$t3, 1
+  ori $t3, $zero, 1
 	sub	$t3, $t1, $t3 # t3 = t1 - 1
 	blez	$t3, div10_return # temp - 1 <= 0 <=> not (temp - 1 > 0)
 	srl	$t0, $t0, 1
@@ -833,7 +834,7 @@ div10_calc_if:
 	j	div10_calc
 div10_return:
 	move	$a0, $t2
-	li	$a1, 10
+  ori $a1, $zero, 10
 	sw	$t2, -1($sp)
 	sw	$ra, -2($sp)
 	addi	$sp, $sp, -3
